@@ -1,0 +1,10 @@
+{
+  "name": "getPoi",
+  "version": "1.0.0",
+  "description": "Proxy AMap nearby places for WhatToEat-AI",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

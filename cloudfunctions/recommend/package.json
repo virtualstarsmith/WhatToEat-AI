@@ -1,0 +1,10 @@
+{
+  "name": "recommend",
+  "version": "1.0.0",
+  "description": "Rule scoring + GLM recommendation for WhatToEat-AI",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

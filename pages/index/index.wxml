@@ -1,0 +1,90 @@
+<view class="page">
+  <!-- 位置栏 -->
+  <view class="loc-bar">
+    <view class="loc-text" wx:if="{{locationOk}}">
+      <text class="loc-icon">📍</text>
+      <text class="loc-coord">{{address}}</text>
+    </view>
+    <view class="loc-text loc-warn" wx:else>
+      <text class="loc-icon">📍</text>
+      <text>{{locationError || '点击右侧授权定位'}}</text>
+    </view>
+    <view class="loc-action" bindtap="refreshLocation">
+      {{locationOk ? '刷新' : '授权'}}
+    </view>
+  </view>
+
+  <!-- 场景栏 -->
+  <view class="scene-section">
+    <text class="section-title">用餐场景</text>
+    <scroll-view scroll-x="{{true}}" class="scene-scroll" enhanced="{{true}}" show-scrollbar="{{false}}">
+      <view class="scene-list">
+        <view
+          wx:for="{{scenes}}"
+          wx:key="*this"
+          class="scene-chip {{scene === item ? 'scene-chip-active' : ''}}"
+          data-scene="{{item}}"
+          bindtap="onSelectScene"
+        >
+          {{item === '下午茶/饮品' ? '下午茶' : item}}
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 兜底提示 -->
+  <view class="banner-fallback" wx:if="{{source === 'fallback' && cardsView.length > 0}}">
+    💬 智能推荐暂不可用，已为你按距离和评分筛选
+  </view>
+
+  <!-- Loading -->
+  <view class="hint" wx:if="{{loading}}">
+    <text>正在为你寻找附近的店…</text>
+  </view>
+
+  <!-- Error -->
+  <view class="hint hint-error" wx:if="{{error && !loading}}">
+    <text>{{error}}</text>
+    <view class="btn-retry" bindtap="onRefresh">重试</view>
+  </view>
+
+  <!-- 推荐卡片 -->
+  <view class="cards" wx:if="{{!loading && cardsView.length > 0}}">
+    <view
+      wx:for="{{cardsView}}"
+      wx:for-index="idx"
+      wx:key="poi_id"
+      class="card"
+    >
+      <view class="card-header">
+        <text class="card-name">{{item.name}}</text>
+        <text class="card-type">{{item.type}}</text>
+      </view>
+      <view class="card-meta">
+        <text class="meta-item">📍 {{item.distanceText}}</text>
+        <text class="meta-item">⭐ {{item.ratingText}}</text>
+        <text class="meta-item" wx:if="{{item.costText}}">💰 {{item.costText}}</text>
+      </view>
+      <view class="card-reason" wx:if="{{item.reason}}">
+        💡 {{item.reason}}
+      </view>
+      <view class="card-actions">
+        <view class="action-btn primary" data-idx="{{idx}}" bindtap="onOpenNav">导航</view>
+        <view class="action-btn" data-idx="{{idx}}" bindtap="onCopyAddr">复制地址</view>
+        <view
+          class="action-btn ghost"
+          wx:if="{{item.commercialUrl}}"
+          data-idx="{{idx}}"
+          bindtap="onOpenCommercial"
+        >🎫</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 换一批 -->
+  <view class="refresh-bar" wx:if="{{cardsView.length > 0}}">
+    <button class="btn-refresh" bindtap="onRefresh" loading="{{refreshing}}">
+      {{refreshing ? '换一批中…' : '换一批'}}
+    </button>
+  </view>
+</view>

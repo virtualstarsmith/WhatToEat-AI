@@ -1,0 +1,4 @@
+{"file": "docs/AI今天吃什么-PRD初稿.md", "reason": "完整 PRD 初稿，包含产品定位、参考图描述、目标用户、功能模块全集；本任务 MVP 是它的精简执行版"}
+{"file": ".trellis/tasks/06-10-wechat-miniprogram-template/prd.md", "reason": "本任务 MVP 范围、确认决策、验收标准、推荐逻辑 V0.1"}
+{"file": ".trellis/tasks/06-10-wechat-miniprogram-template/design.md", "reason": "MVP 技术设计：架构、目录结构、云函数接口契约、规则评分公式、场景关键词表、降级路径、主题色"}
+{"file": ".trellis/tasks/06-10-wechat-miniprogram-template/implement.md", "reason": "本实施计划：3 阶段交付（主题脚手架/云函数/首页重写）、影响文件、验收方式、回滚点"}

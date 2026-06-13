@@ -1,0 +1,9 @@
+{
+  "desc": "WhatToEat-AI sitemap",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}
