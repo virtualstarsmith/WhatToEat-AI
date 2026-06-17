@@ -54,6 +54,20 @@
       <view class="btn-retry" bindtap="onRefresh">重试</view>
     </view>
 
+    <!-- 外卖红包（平台级 CPS 入口，配置齐全时展示） -->
+    <view class="coupon-bar" wx:if="{{cardsView.length > 0 && platformButtons.length > 0}}">
+      <text class="coupon-bar-title">🎁 领红包下单更省</text>
+      <view class="coupon-btns">
+        <view
+          wx:for="{{platformButtons}}"
+          wx:key="key"
+          class="coupon-btn"
+          data-key="{{item.key}}"
+          bindtap="onOpenPlatform"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
     <!-- 推荐卡片（loading 时也保留显示，避免刷新时推荐消失） -->
     <view class="cards" wx:if="{{cardsView.length > 0}}">
       <view
@@ -79,7 +93,7 @@
           <view class="action-btn" data-idx="{{idx}}" bindtap="onCopyAddr">复制地址</view>
           <view
             class="action-btn ghost"
-            wx:if="{{item.commercialUrl}}"
+            wx:if="{{item.shopEntry}}"
             data-idx="{{idx}}"
             bindtap="onOpenCommercial"
           >🎫</view>

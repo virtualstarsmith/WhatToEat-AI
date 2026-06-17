@@ -125,3 +125,34 @@
 .btn-refresh::after {
   border: 0;
 }
+
+/* === 外卖红包（平台级 CPS 入口） === */
+.coupon-bar {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.12), rgba(255, 159, 28, 0.12));
+  border: 2rpx solid rgba(255, 107, 53, 0.25);
+  border-radius: 16rpx;
+  padding: 20rpx 22rpx;
+  margin-bottom: 24rpx;
+}
+.coupon-bar-title {
+  display: block;
+  font-size: 24rpx;
+  color: #C04E22;
+  font-weight: 600;
+  margin-bottom: 14rpx;
+}
+.coupon-btns {
+  display: flex;
+  gap: 16rpx;
+}
+.coupon-btn {
+  flex: 1;
+  text-align: center;
+  background: #FF6B35;
+  color: #FFFFFF;
+  font-size: 26rpx;
+  font-weight: 600;
+  padding: 16rpx 0;
+  border-radius: 36rpx;
+  box-shadow: 0 4rpx 12rpx rgba(255, 107, 53, 0.22);
+}

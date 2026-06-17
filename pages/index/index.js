@@ -2,9 +2,9 @@
 // 位置与 POI 数据通过 locationHelper + app.globalData 与 mystery 页面共享
 // 盲盒逻辑已迁移至 pages/mystery/
 
-const commercial = require('../../config/commercial.js');
 const { SCENE_KEYWORDS, SCENES } = require('../../config/sceneKeywords.js');
 const locHelper = require('../../utils/locationHelper.js');
+const commercialHelper = require('../../utils/commercialHelper.js');
 
 const SCENE_TONE_MAP = {
   '随便吃点': 'tone-warm',
@@ -67,13 +67,6 @@ function sceneLabel(scene) {
   return scene === '下午茶/饮品' ? '下午茶' : scene;
 }
 
-function lookupCommercial(name) {
-  if (!name) return '';
-  const entries = (commercial && commercial.entries) || [];
-  const hit = entries.find((e) => e && e.match && name.indexOf(e.match) >= 0);
-  return hit ? hit.url : '';
-}
-
 function formatDistance(d) {
   if (d == null) return '';
   return d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m';
@@ -95,7 +88,7 @@ function buildCardView(rec) {
     ratingText: formatRating(poi.rating),
     costText: poi.cost ? '¥' + poi.cost + '/人' : '',
     reason: rec.reason || '',
-    commercialUrl: lookupCommercial(poi.name)
+    shopEntry: !!commercialHelper.lookupShopEntry(poi.name)
   };
 }
 
@@ -110,6 +103,7 @@ Page({
     pois: [],
     recommendations: [],
     cardsView: [],
+    platformButtons: [], // 平台级「领红包」入口（onLoad 从 commercialHelper 计算）
     source: '', // 'ai' | 'fallback' | ''
     excludeIds: [],
     loading: false,
@@ -129,6 +123,8 @@ Page({
   onLoad() {
     this._setScene(detectScene());
     this._checkDailyReset();
+    // 平台级推广入口（静态配置派生，算一次即可）
+    this.setData({ platformButtons: commercialHelper.getPlatformButtons() });
   },
 
   onShow() {
@@ -479,11 +475,16 @@ Page({
   onOpenCommercial(e) {
     const idx = e.currentTarget.dataset.idx;
     const card = this.data.cardsView[idx];
-    if (!card || !card.commercialUrl) return;
-    wx.setClipboardData({
-      data: card.commercialUrl,
-      success: () =>
-        wx.showToast({ title: '优惠链接已复制', icon: 'success', duration: 1500 })
-    });
+    if (!card || !card.shopEntry) return;
+    // 按商家名重新查 entry（避免把配置对象塞进卡片 data）
+    const entry = commercialHelper.lookupShopEntry(card.name);
+    commercialHelper.openEntry(entry);
+  },
+
+  // 平台级「领红包」入口点击
+  onOpenPlatform(e) {
+    const key = e.currentTarget.dataset.key;
+    const platform = (this.data.platformButtons || []).find((p) => p.key === key);
+    commercialHelper.openEntry(platform);
   }
 });
