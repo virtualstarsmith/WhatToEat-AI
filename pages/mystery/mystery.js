@@ -60,6 +60,11 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 });
     }
+    // pois 在本页非活跃期间被更新（如在 AI 页切换了定位）→ 重置盲盒，清掉旧位置开过的盒
+    if (locHelper.poisUpdatedSince(this)) {
+      locHelper.markPoisConsumed(this);
+      this._resetMysteryBox();
+    }
   },
 
   _setScene(scene) {
@@ -74,6 +79,7 @@ Page({
       .then((pois) => {
         locHelper.syncFromGlobal(this);
         this._resetMysteryBox();
+        locHelper.markPoisConsumed(this);
       })
       .catch(() => {
         locHelper.syncFromGlobal(this);

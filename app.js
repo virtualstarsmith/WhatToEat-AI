@@ -9,6 +9,7 @@ App({
     coord: null,          // { longitude, latitude }
     address: '',          // 位置栏展示文本
     pois: [],             // getPoi 返回的标准化 POI 列表
+    poisCoord: null,      // 产出当前 pois 的坐标（缓存命中时校验，避免切换定位后误用旧 POI）
     locationOk: false,    // 是否已授权定位
     locationError: '',    // 定位错误信息
     poisLoadedAt: 0       // pois 加载时间戳（用于判断是否需要刷新）

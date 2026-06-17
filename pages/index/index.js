@@ -138,7 +138,12 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 });
     }
-    // 如果已有 POI 但当前无推荐结果，自动触发一次推荐
+    // pois 在本页非活跃期间被更新（如在盲盒页切换了定位）→ 作废旧推荐
+    if (locHelper.poisUpdatedSince(this)) {
+      locHelper.markPoisConsumed(this);
+      this.setData({ excludeIds: [], recommendations: [], cardsView: [], source: '', error: '' });
+    }
+    // 如果已有 POI 但当前无推荐结果（含上一步清空后），自动触发一次推荐
     if (this.data.locationOk && this.data.pois.length > 0 && this.data.cardsView.length === 0 && !this.data.loading) {
       this.callRecommend(this.data.pois);
     }
@@ -303,6 +308,8 @@ Page({
   },
 
   async callRecommend(pois) {
+    // 本次推荐消费了当前 pois 版本，标记以供 onShow 判断是否需要作废
+    locHelper.markPoisConsumed(this);
     const scored = scoreCandidates(pois, this.data.scene, this.data.excludeIds);
     const candidates = topN(scored, 7);
     const candidateMap = new Map(candidates.map((c) => [c.poi_id, c]));

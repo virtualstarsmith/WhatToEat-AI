@@ -20,6 +20,19 @@ function syncFromGlobal(page) {
   });
 }
 
+// 判断全局 pois 是否在页面"上次消费"之后被更新过。
+// poisLoadedAt 在每次成功拉取（切换定位 / 刷新 / 首次加载）后都会变化，
+// 页面据此在 onShow 时作废旧的派生状态（推荐结果 / 开过的盲盒）。
+function poisUpdatedSince(page) {
+  const g = getGlobalData();
+  return (g.poisLoadedAt || 0) !== (page._poisConsumedAt || 0);
+}
+
+// 标记页面已消费当前版本的 pois（生成派生数据后调用）
+function markPoisConsumed(page) {
+  page._poisConsumedAt = getGlobalData().poisLoadedAt || 0;
+}
+
 // 发起位置授权选择，成功后获取 POI 并写入 globalData
 // 返回 Promise<pois>，失败时 reject
 function chooseLocationAndGetPois() {
@@ -60,10 +73,14 @@ function fetchPois(coord) {
     return Promise.reject(new Error('coord required'));
   }
 
-  // 缓存命中判断（同一坐标 + TTL 内）
+  // 缓存命中判断（坐标一致 + TTL 内）。坐标变化（切换定位）必须重新拉取，
+  // 否则会误返回旧位置的 POI。
   const g = app.globalData;
   const now = Date.now();
-  const cacheFresh = g.pois && g.pois.length > 0 && (now - (g.poisLoadedAt || 0)) < POI_CACHE_TTL;
+  const sameCoord = g.poisCoord &&
+    g.poisCoord.latitude === coord.latitude &&
+    g.poisCoord.longitude === coord.longitude;
+  const cacheFresh = sameCoord && g.pois && g.pois.length > 0 && (now - (g.poisLoadedAt || 0)) < POI_CACHE_TTL;
   if (cacheFresh) {
     return Promise.resolve(g.pois);
   }
@@ -81,6 +98,7 @@ function fetchPois(coord) {
       // 写入全局共享
       app.globalData.pois = result.pois;
       app.globalData.poisLoadedAt = Date.now();
+      app.globalData.poisCoord = coord;
       return result.pois;
     });
 }
@@ -105,6 +123,8 @@ function invalidatePoisCache() {
 
 module.exports = {
   syncFromGlobal,
+  poisUpdatedSince,
+  markPoisConsumed,
   chooseLocationAndGetPois,
   fetchPois,
   refreshPois,
