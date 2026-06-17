@@ -4,7 +4,14 @@ const CLOUD_ENV = 'cloud1-d9g9rlmpp3a746cac';
 
 App({
   globalData: {
-    appName: 'WhatToEat-AI'
+    appName: 'WhatToEat-AI',
+    // 跨页面共享的位置与 POI 数据（index 与 mystery 页面共用）
+    coord: null,          // { longitude, latitude }
+    address: '',          // 位置栏展示文本
+    pois: [],             // getPoi 返回的标准化 POI 列表
+    locationOk: false,    // 是否已授权定位
+    locationError: '',    // 定位错误信息
+    poisLoadedAt: 0       // pois 加载时间戳（用于判断是否需要刷新）
   },
 
   onLaunch() {

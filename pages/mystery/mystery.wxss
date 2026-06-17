@@ -1,0 +1,302 @@
+/* 盲盒页面专属样式（公共样式见 app.wxss） */
+
+.mystery-page {
+  background: linear-gradient(180deg, #FFF8F3 0%, #FFFFFF 60%);
+}
+
+.mystery-scroll {
+  /* 留出底部 tabBar 高度（110rpx + 安全区） */
+  height: calc(100vh - 200rpx);
+}
+
+.mystery-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 4rpx 60rpx;
+}
+
+/* 空状态（未授权） */
+.mystery-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 100rpx 40rpx;
+  text-align: center;
+}
+.empty-icon {
+  font-size: 120rpx;
+  margin-bottom: 30rpx;
+}
+.empty-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #2B2118;
+  margin-bottom: 14rpx;
+}
+.empty-desc {
+  font-size: 26rpx;
+  color: #8A7968;
+  line-height: 1.6;
+}
+
+/* 盲盒主体 */
+.mystery-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30rpx 0;
+  min-height: 400rpx;
+  justify-content: center;
+}
+
+.box-idle-wrap,
+.box-opening-wrap,
+.box-revealed-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* 待机：盲盒图标浮动动画 */
+.box-idle-wrap .box-icon {
+  font-size: 180rpx;
+  animation: mbFloat 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 12rpx 24rpx rgba(255, 107, 53, 0.25));
+  margin-bottom: 30rpx;
+}
+.box-hint {
+  font-size: 26rpx;
+  color: #8A7968;
+}
+.box-sub-hint {
+  font-size: 22rpx;
+  color: #8A7968;
+  margin-top: 12rpx;
+  text-align: center;
+  line-height: 1.5;
+}
+/* 池耗尽图标：无浮动动画，灰色调 */
+.box-icon.box-exhausted {
+  animation: none;
+  filter: grayscale(0.4) opacity(0.7);
+  opacity: 0.7;
+}
+
+/* 开盒动画：晃动 + 光环 */
+.box-opening-wrap {
+  position: relative;
+}
+.box-opening-wrap .box-icon {
+  font-size: 180rpx;
+  animation: mbShake 0.4s ease-in-out infinite, mbGlow 1.5s ease-out infinite;
+  margin-bottom: 30rpx;
+}
+.box-opening-wrap .box-hint {
+  font-size: 28rpx;
+  color: #FF6B35;
+  font-weight: 600;
+  animation: mbBlink 0.8s ease-in-out infinite;
+}
+
+/* 揭晓结果 */
+.box-revealed-wrap {
+  animation: mbFadeInUp 0.5s ease-out;
+}
+.reveal-badge {
+  background: linear-gradient(135deg, #F6C05A 0%, #F2A93B 100%);
+  color: #2B2118;
+  font-size: 24rpx;
+  font-weight: 700;
+  padding: 10rpx 28rpx;
+  border-radius: 30rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 12rpx rgba(242, 169, 59, 0.35);
+}
+
+/* 盲盒结果卡片 */
+.mystery-card {
+  width: 100%;
+  border: 3rpx solid rgba(255, 107, 53, 0.2);
+  animation: mbCardPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mystery-card.card-mismatch {
+  border-color: rgba(138, 121, 104, 0.4);
+  background: linear-gradient(180deg, #FFF8F3 0%, #FFFFFF 50%);
+}
+
+/* 开盲盒按钮 */
+.mystery-action-bar {
+  width: 100%;
+  padding: 0 20rpx;
+  margin-top: 30rpx;
+}
+.btn-mystery {
+  background: linear-gradient(135deg, #FF6B35 0%, #F2A93B 100%);
+  color: #FFFFFF;
+  font-size: 32rpx;
+  font-weight: 700;
+  border-radius: 50rpx;
+  padding: 26rpx 0;
+  box-shadow: 0 8rpx 24rpx rgba(255, 107, 53, 0.4);
+}
+.btn-mystery::after {
+  border: 0;
+}
+.btn-mystery[disabled] {
+  background: #EADFD6;
+  color: #FFFFFF;
+  box-shadow: none;
+}
+
+/* 历史记录（纵向列表） */
+.history-section {
+  width: 100%;
+  margin-top: 40rpx;
+}
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8rpx;
+  margin-bottom: 16rpx;
+}
+.history-title {
+  font-size: 26rpx;
+  color: #2B2118;
+  font-weight: 700;
+}
+.history-count {
+  font-size: 22rpx;
+  color: #8A7968;
+}
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.history-card {
+  display: flex;
+  align-items: center;
+  background: #FFFFFF;
+  padding: 22rpx 24rpx;
+  border-radius: 18rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  border: 2rpx solid transparent;
+  transition: all 0.2s ease;
+}
+.history-card:active {
+  transform: scale(0.98);
+}
+/* 最新一条高亮 */
+.history-card-latest {
+  border-color: rgba(242, 169, 59, 0.5);
+  background: linear-gradient(135deg, #FFF4D8 0%, #FFFFFF 100%);
+}
+.history-rank {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #FF6B35;
+  background: rgba(255, 107, 53, 0.1);
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  margin-right: 20rpx;
+  white-space: nowrap;
+}
+.history-card-latest .history-rank {
+  background: linear-gradient(135deg, #F6C05A 0%, #F2A93B 100%);
+  color: #2B2118;
+}
+.history-info {
+  flex: 1;
+  min-width: 0;
+}
+.history-name-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+.history-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2B2118;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 12rpx;
+}
+.history-type {
+  font-size: 20rpx;
+  color: #8A7968;
+  background: #FFF0E8;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+.history-meta {
+  display: flex;
+  gap: 18rpx;
+  flex-wrap: wrap;
+}
+.history-meta-item {
+  font-size: 22rpx;
+  color: #8A7968;
+}
+.history-arrow {
+  flex-shrink: 0;
+  font-size: 36rpx;
+  color: #8A7968;
+  margin-left: 12rpx;
+  line-height: 1;
+}
+.history-tip {
+  text-align: center;
+  font-size: 22rpx;
+  color: #8A7968;
+  margin-top: 20rpx;
+  padding: 0 8rpx;
+}
+
+/* === 盲盒动画 keyframes === */
+@keyframes mbFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-16rpx) rotate(-3deg); }
+}
+
+@keyframes mbShake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  20% { transform: translateX(-16rpx) rotate(-8deg); }
+  40% { transform: translateX(16rpx) rotate(8deg); }
+  60% { transform: translateX(-12rpx) rotate(-6deg); }
+  80% { transform: translateX(12rpx) rotate(6deg); }
+}
+
+@keyframes mbGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 10rpx rgba(242, 169, 59, 0.55));
+  }
+  50% {
+    filter: drop-shadow(0 0 30rpx rgba(242, 169, 59, 0.85)) drop-shadow(0 0 50rpx rgba(255, 107, 53, 0.45));
+  }
+}
+
+@keyframes mbBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes mbFadeInUp {
+  0% { opacity: 0; transform: translateY(30rpx); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mbCardPop {
+  0% { opacity: 0; transform: scale(0.8); }
+  60% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}

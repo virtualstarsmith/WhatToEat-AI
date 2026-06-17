@@ -1,58 +1,15 @@
-.page {
-  padding: 32rpx 28rpx 80rpx;
-}
+/* 首页 AI 推荐专属样式（公共样式 loc-bar / card / action-btn 见 app.wxss） */
 
-/* === 位置栏 === */
-.loc-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22rpx 26rpx;
-  background: #FFFFFF;
-  border-radius: 18rpx;
-  margin-bottom: 28rpx;
-  box-shadow: 0 4rpx 14rpx rgba(255, 107, 53, 0.08);
-}
-.loc-text {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  font-size: 26rpx;
-  color: #2B2118;
-  overflow: hidden;
-  margin-right: 16rpx;
-}
-.loc-text.loc-warn {
-  color: #8A7968;
-}
-.loc-icon {
-  margin-right: 10rpx;
-}
-.loc-coord {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.loc-action {
-  font-size: 26rpx;
-  color: #FF6B35;
-  padding: 6rpx 18rpx;
-  font-weight: 600;
-  background: rgba(255, 107, 53, 0.08);
-  border-radius: 24rpx;
-  flex-shrink: 0;
+/* 内容滚动区：固定高度，让 scroll-view 真正接管滚动，
+   位置栏 loc-bar 在 scroll-view 外面 → 始终固定在顶部。
+   高度扣除：loc-bar 约 100rpx + 页面 padding-top 24rpx + 底部 tabBar 100rpx + 安全区 */
+.content-scroll {
+  height: calc(100vh - 224rpx - env(safe-area-inset-bottom));
 }
 
 /* === 场景栏 === */
 .scene-section {
   margin-bottom: 28rpx;
-}
-.section-title {
-  display: block;
-  font-size: 24rpx;
-  color: #8A7968;
-  margin-bottom: 16rpx;
-  font-weight: 600;
 }
 .scene-scroll {
   width: 100%;
@@ -78,7 +35,11 @@
   background: #FF6B35;
   color: #FFFFFF;
   font-weight: 600;
-  box-shadow: 0 4rpx 14rpx rgba(255, 107, 53, 0.3);
+  box-shadow: 0 4rpx 14rpx rgba(255, 107, 53, 0.22);
+}
+/* 加载中：非当前场景 chip 降透明度，提示暂不可切换（点击由 onSelectScene 守卫拦截） */
+.scene-chip-disabled {
+  opacity: 0.5;
 }
 
 /* === Banner === */
@@ -90,6 +51,31 @@
   font-size: 24rpx;
   margin-bottom: 22rpx;
   line-height: 1.5;
+}
+
+/* === 刷新提示条（有旧推荐时，顶部小加载提示） === */
+.refresh-banner {
+  background: rgba(255, 107, 53, 0.08);
+  border-radius: 12rpx;
+  padding: 14rpx 22rpx;
+  margin-bottom: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.refresh-banner-text {
+  font-size: 24rpx;
+  color: #FF6B35;
+  font-weight: 600;
+}
+.refresh-banner-text::before {
+  content: '⟳ ';
+  display: inline-block;
+  animation: refreshSpin 1s linear infinite;
+}
+@keyframes refreshSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* === Hint === */
@@ -114,94 +100,22 @@
   font-weight: 600;
 }
 
-/* === 卡片 === */
+/* === 卡片列表 === */
 .cards {
   display: flex;
   flex-direction: column;
   gap: 24rpx;
 }
-.card {
-  background: #FFFFFF;
-  border-radius: 22rpx;
-  padding: 30rpx 28rpx 26rpx;
-  box-shadow: 0 4rpx 18rpx rgba(0, 0, 0, 0.05);
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16rpx;
-}
-.card-name {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: #2B2118;
-  flex: 1;
-  line-height: 1.3;
-}
-.card-type {
-  font-size: 22rpx;
-  color: #8A7968;
-  background: #FFF8F3;
-  padding: 6rpx 14rpx;
-  border-radius: 10rpx;
-  margin-left: 14rpx;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.card-meta {
-  display: flex;
-  gap: 22rpx;
-  margin-bottom: 18rpx;
-  flex-wrap: wrap;
-}
-.meta-item {
-  font-size: 24rpx;
-  color: #8A7968;
-}
-.card-reason {
-  background: #FFF8F3;
-  padding: 18rpx 22rpx;
-  border-radius: 14rpx;
-  font-size: 26rpx;
-  color: #2B2118;
-  line-height: 1.55;
-  margin-bottom: 22rpx;
-  border-left: 6rpx solid #FF6B35;
-}
-.card-actions {
-  display: flex;
-  gap: 14rpx;
-}
-.action-btn {
-  flex: 1;
-  text-align: center;
-  padding: 16rpx 0;
-  border-radius: 14rpx;
-  font-size: 26rpx;
-  font-weight: 600;
-  background: #FFF8F3;
-  color: #FF6B35;
-}
-.action-btn.primary {
-  background: #FF6B35;
-  color: #FFFFFF;
-}
-.action-btn.ghost {
-  background: transparent;
-  color: #8A7968;
-  border: 2rpx solid #E5DDD5;
-  flex: 0 0 auto;
-  padding: 16rpx 22rpx;
-}
 
 /* === 换一批 === */
 .refresh-bar {
   margin-top: 40rpx;
-  padding: 0 40rpx;
+  /* 底部 60rpx 留白：避免被底部 tabBar（100rpx + 安全区）遮住，
+     与盲盒页 .mystery-container 的 padding-bottom: 60rpx 保持一致 */
+  padding: 0 40rpx 60rpx;
 }
 .btn-refresh {
-  background: #2B2118;
+  background: #5B4034;
   color: #FFFFFF;
   font-size: 28rpx;
   font-weight: 600;

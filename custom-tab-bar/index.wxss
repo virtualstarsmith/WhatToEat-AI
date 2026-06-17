@@ -1,0 +1,44 @@
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: #FFFFFF;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 100;
+  height: calc(100rpx + env(safe-area-inset-bottom));
+}
+
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* 选中态：顶部橙色指示条 */
+.tab-bar-item.tab-bar-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48rpx;
+  height: 6rpx;
+  background: #FF6B35;
+  border-radius: 0 0 6rpx 6rpx;
+}
+
+.tab-text {
+  font-size: 28rpx;
+  font-weight: 500;
+  letter-spacing: 2rpx;
+}
+
+/* 选中态文字加粗 */
+.tab-bar-active .tab-text {
+  font-weight: 700;
+}

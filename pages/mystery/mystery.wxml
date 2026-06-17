@@ -1,0 +1,118 @@
+<view class="page mystery-page">
+  <!-- 位置栏（共享样式，数据来自 globalData） -->
+  <view class="loc-bar">
+    <view class="loc-text" wx:if="{{locationOk}}">
+      <text class="loc-icon">📍</text>
+      <text class="loc-coord">{{address}}</text>
+    </view>
+    <view class="loc-text loc-warn" wx:else>
+      <text class="loc-icon">📍</text>
+      <text>{{locationError || '点击右侧授权定位'}}</text>
+    </view>
+    <view class="loc-action" bindtap="refreshLocation">
+      {{locationOk ? '刷新' : '授权'}}
+    </view>
+  </view>
+
+  <scroll-view scroll-y class="mystery-scroll">
+    <view class="mystery-container">
+      <!-- 未授权位置：引导用户授权 -->
+      <view class="mystery-empty" wx:if="{{!locationOk}}">
+        <text class="empty-icon">🎁</text>
+        <text class="empty-title">开启你的美食盲盒</text>
+        <text class="empty-desc">点击右上角「授权」定位后，\n随机为你推荐附近餐厅</text>
+      </view>
+
+      <!-- 盲盒主体（已授权） -->
+      <block wx:else>
+        <view class="mystery-box mystery-{{mysteryBox.status}}">
+          <!-- 池耗尽状态 -->
+          <view class="box-idle-wrap" wx:if="{{mysteryBox.poolExhausted}}">
+            <view class="box-icon box-exhausted">🎯</view>
+            <text class="box-hint">附近盲盒已全部开完</text>
+            <text class="box-sub-hint">在上方点击「刷新」换个位置，解锁更多惊喜</text>
+          </view>
+
+          <!-- 待机状态：毛玻璃盲盒 -->
+          <view class="box-idle-wrap" wx:elif="{{mysteryBox.status === 'idle'}}">
+            <view class="box-icon">🎁</view>
+            <text class="box-hint">点击下方按钮，开启今日惊喜</text>
+          </view>
+
+          <!-- 开盒动画 -->
+          <view class="box-opening-wrap" wx:elif="{{mysteryBox.status === 'opening'}}">
+            <view class="box-icon box-shaking">🎁</view>
+            <text class="box-hint">开盒中…✨</text>
+          </view>
+
+          <!-- 揭晓结果 -->
+          <view class="box-revealed-wrap" wx:else>
+            <view class="reveal-badge">🎉 恭喜开出</view>
+            <view class="card mystery-card {{mysteryBox.currentResult.isMismatch ? 'card-mismatch' : ''}}">
+              <view class="card-header">
+                <text class="card-name">{{mysteryBox.currentResult.name}}</text>
+                <text class="card-type">{{mysteryBox.currentResult.type}}</text>
+              </view>
+              <view class="card-meta">
+                <text class="meta-item">📍 {{mysteryBox.currentResult.distanceText}}</text>
+                <text class="meta-item">⭐ {{mysteryBox.currentResult.ratingText}}</text>
+                <text class="meta-item" wx:if="{{mysteryBox.currentResult.costText}}">💰 {{mysteryBox.currentResult.costText}}</text>
+              </view>
+              <view class="card-reason" wx:if="{{mysteryBox.currentResult.reason}}">
+                {{mysteryBox.currentResult.reason}}
+              </view>
+              <view class="card-actions">
+                <view class="action-btn primary" bindtap="onMysteryNav">导航</view>
+                <view class="action-btn" bindtap="onMysteryCopyAddr">复制地址</view>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 开盲盒 / 再开一次按钮 -->
+        <view class="mystery-action-bar">
+          <button
+            class="btn-mystery"
+            bindtap="onOpenMysteryBox"
+            disabled="{{mysteryBox.status === 'opening' || mysteryBox.poolExhausted}}"
+            loading="{{mysteryBox.status === 'opening'}}"
+          >
+            {{mysteryBox.poolExhausted ? '🎯 已开完' : (mysteryBox.status === 'opening' ? '开盒中…' : (mysteryBox.status === 'revealed' ? '✨ 再开一次' : '✨ 开盲盒'))}}
+          </button>
+        </view>
+
+        <!-- 历史记录（纵向列表，按开盒时间倒序） -->
+        <view class="history-section" wx:if="{{mysteryBox.history.length > 0}}">
+          <view class="history-header">
+            <text class="history-title">本次开过的盲盒</text>
+            <text class="history-count">共 {{mysteryBox.history.length}} 个</text>
+          </view>
+          <view class="history-list">
+            <view
+              wx:for="{{mysteryBox.history}}"
+              wx:key="poi_id"
+              class="history-card {{index === 0 ? 'history-card-latest' : ''}}"
+              data-idx="{{index}}"
+              bindtap="onReopenHistory"
+            >
+              <view class="history-rank">第{{item.rank}}开</view>
+              <view class="history-info">
+                <view class="history-name-row">
+                  <text class="history-name">{{item.name}}</text>
+                  <text class="history-type" wx:if="{{item.card.type}}">{{item.card.type}}</text>
+                </view>
+                <view class="history-meta">
+                  <text class="history-meta-item">📍 {{item.card.distanceText}}</text>
+                  <text class="history-meta-item">⭐ {{item.card.ratingText}}</text>
+                  <text class="history-meta-item" wx:if="{{item.card.costText}}">{{item.card.costText}}</text>
+                </view>
+              </view>
+              <text class="history-arrow">›</text>
+            </view>
+          </view>
+          <view class="history-tip">点击任意一条可重新查看详情</view>
+        </view>
+      </block>
+    </view>
+  </scroll-view>
+</view>

@@ -23,7 +23,7 @@ button::after {
 
 .page {
   min-height: 100vh;
-  padding: 40rpx 32rpx 56rpx;
+  padding: 24rpx 24rpx 0;
 }
 
 .section-title {
@@ -31,4 +31,153 @@ button::after {
   font-size: 24rpx;
   font-weight: 600;
   letter-spacing: 0;
+}
+
+/* === 位置栏（index 与 mystery 共享） === */
+.loc-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22rpx 26rpx;
+  background: #FFFFFF;
+  border-radius: 18rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 14rpx rgba(255, 107, 53, 0.08);
+}
+.loc-text {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  font-size: 26rpx;
+  color: #2B2118;
+  overflow: hidden;
+  margin-right: 16rpx;
+}
+.loc-text.loc-warn {
+  color: #8A7968;
+}
+.loc-icon {
+  margin-right: 10rpx;
+}
+.loc-coord {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.loc-action {
+  font-size: 26rpx;
+  color: #FF6B35;
+  padding: 6rpx 18rpx;
+  font-weight: 600;
+  background: rgba(255, 107, 53, 0.08);
+  border-radius: 24rpx;
+  flex-shrink: 0;
+}
+
+/* === 卡片（AI 推荐 / 盲盒结果 共享） === */
+.card {
+  background: #FFFFFF;
+  border-radius: 22rpx;
+  padding: 30rpx 28rpx 26rpx;
+  box-shadow: 0 4rpx 18rpx rgba(0, 0, 0, 0.05);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16rpx;
+}
+.card-name {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #2B2118;
+  flex: 1;
+  line-height: 1.3;
+  /* 长名称处理：允许换行，防止溢出（text 组件不支持 line-clamp，用换行方案） */
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+.card-type {
+  font-size: 22rpx;
+  color: #8A7968;
+  background: #FFF0E8;
+  padding: 6rpx 14rpx;
+  border-radius: 10rpx;
+  margin-left: 14rpx;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.card-meta {
+  display: flex;
+  gap: 22rpx;
+  margin-bottom: 18rpx;
+  flex-wrap: wrap;
+}
+.meta-item {
+  font-size: 24rpx;
+  color: #8A7968;
+}
+.card-reason {
+  background: #FFF8F3;
+  padding: 18rpx 22rpx;
+  border-radius: 14rpx;
+  font-size: 26rpx;
+  color: #2B2118;
+  line-height: 1.55;
+  margin-bottom: 22rpx;
+  border-left: 6rpx solid #FF6B35;
+  /* 长描述处理：允许换行，防止溢出 */
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+.card-actions {
+  display: flex;
+  gap: 14rpx;
+}
+.action-btn {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  border-radius: 14rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  background: #FFF8F3;
+  color: #FF6B35;
+}
+.action-btn.primary {
+  background: #FF6B35;
+  color: #FFFFFF;
+}
+.action-btn.ghost {
+  background: transparent;
+  color: #8A7968;
+  border: 2rpx solid #EADFD6;
+  flex: 0 0 auto;
+  padding: 16rpx 22rpx;
+}
+
+/* 语义色：用于场景、状态、推荐标签 */
+.tone-fresh {
+  background: #3FA66B !important;
+  color: #FFFFFF !important;
+}
+
+.tone-value {
+  background: #F2A93B !important;
+  color: #2B2118 !important;
+}
+
+.tone-warm {
+  background: #FF8A5B !important;
+  color: #FFFFFF !important;
+}
+
+.tone-spicy {
+  background: #E94B35 !important;
+  color: #FFFFFF !important;
+}
+
+.tone-late {
+  background: #5B4034 !important;
+  color: #FFFFFF !important;
 }
