@@ -3,6 +3,7 @@
 // 详见 .trellis/tasks/06-14-mystery-box-feature/design.md §3
 
 const { SCENE_KEYWORDS } = require('../config/sceneKeywords.js');
+const { normalizePoiType } = require('./util.js');
 
 // ===== 评分相关（复用 index.js 既有公式）=====
 
@@ -26,10 +27,11 @@ const CHAIN_KEYWORDS = [
 ];
 
 // 长尾加成：连锁店降权，特色小店加权（参考"逆用户频率"长尾加权思想）
+// 连锁取 0.2（而非 0.3）：在 20% 的长尾维度上进一步压制连锁，让特色小店更易被开出
 function longTailBonus(poi) {
   const name = poi.name || '';
   const isChain = CHAIN_KEYWORDS.some((k) => name.indexOf(k) >= 0);
-  return isChain ? 0.3 : 1.0;
+  return isChain ? 0.2 : 1.0;
 }
 
 // 时段感知加权：匹配当前时段 ×1.3，不匹配 ×0.7（软引导，不硬过滤）
@@ -44,11 +46,23 @@ function timeAwareMultiplier(poi, currentScene) {
 // ===== 质量门槛 =====
 
 // 质量门槛筛选：保证盲盒≠垃圾推荐
+// 无评分店放宽到 1500m（原 500m 过严，会误杀郊区/低密度区的特色小店，
+// 与 longTailBonus「捧特色小店」的意图矛盾）
 function qualifyFilter(poi) {
   const hasRating = poi.rating && poi.rating >= 3.5;
-  const nearbyNoRating = !poi.rating && (poi.distance || 0) <= 500;
+  const nearbyNoRating = !poi.rating && (poi.distance || 0) <= 1500;
   const inRange = (poi.distance || 0) <= 3000;
   return (hasRating || nearbyNoRating) && inRange;
+}
+
+// ===== 稳定标识 =====
+
+// 生成 POI 稳定唯一标识。
+// 复合键 `location|name`，与云函数 getPoi/index.js 的去重键完全一致。
+// 用它而非数组下标，可保证池子顺序变化（刷新/翻页/切定位）后同一店铺仍为同一 id，
+// 从而让会话去重真正生效。
+function makePoiId(poi) {
+  return `${poi.location || ''}|${poi.name || ''}`;
 }
 
 // ===== 权重计算 =====
@@ -87,27 +101,46 @@ function weightedRandomPick(candidates) {
 function mysteryBoxRecommend(pois, openedIds, currentScene) {
   const epsilon = 0.3; // 30% 探索 / 70% 利用
 
-  // 1. 质量门槛 + 会话去重
+  // 1. 质量门槛 + 会话去重（poi_id 用 location|name 稳定键，保证池子顺序变化后去重仍生效）
   const openedSet = new Set((openedIds || []).map(String));
   const candidates = pois
-    .map((poi, idx) => ({ poi, poi_id: String(idx) }))
+    .map((poi) => ({ poi, poi_id: makePoiId(poi) }))
     .filter((c) => qualifyFilter(c.poi))
     .filter((c) => !openedSet.has(c.poi_id));
 
   if (candidates.length === 0) return null; // 池子耗尽
 
-  // 2. Epsilon-Greedy 决策
-  if (Math.random() < epsilon) {
-    // 探索：纯随机
-    return candidates[Math.floor(Math.random() * candidates.length)];
-  }
-
-  // 利用：加权随机
+  // 2. 预计算权重（探索与利用共用；候选通常仅几十家，开销可忽略）
   const weighted = candidates.map((c) => ({
     ...c,
     weight: calculateWeight(c.poi, currentScene)
   }));
+
+  // 3. Epsilon-Greedy 决策
+  if (Math.random() < epsilon) {
+    // 探索：中段探索，而非纯随机。
+    // 按权重升序排序后取 30%~70% 分位的中段池随机选——既避免纯随机开出离谱结果，
+    // 又能开出"纯利用"选不到的次优好店，保留盲盒惊喜性。
+    return midBandPick(weighted);
+  }
+
+  // 利用：加权随机
   return weightedRandomPick(weighted);
+}
+
+// 中段探索：按权重升序排序，从 30%~70% 分位的子集里随机挑一个。
+// 候选过少（< 3）时退化为「取权重较高者」，避免选出明显劣质结果。
+function midBandPick(weighted) {
+  const sorted = weighted.slice().sort((a, b) => (a.weight || 0) - (b.weight || 0));
+  const n = sorted.length;
+  if (n < 3) {
+    // 候选极少：直接取排序后最高权重者（避免在 2 家里选了更差的）
+    return sorted[n - 1];
+  }
+  const lo = Math.floor(n * 0.3);
+  const hi = Math.ceil(n * 0.7);
+  const band = sorted.slice(lo, hi); // [lo, hi)
+  return band[Math.floor(Math.random() * band.length)];
 }
 
 // ===== 场景识别辅助 =====
@@ -156,7 +189,7 @@ function formatRatingZh(r) {
 function generateMysteryReason(poi, currentScene) {
   const distanceText = formatDistanceZh(poi.distance);
   const ratingText = formatRatingZh(poi.rating);
-  const type = poi.type || '餐饮';
+  const type = normalizePoiType(poi.type);
   const name = poi.name || '神秘店铺';
 
   // 时段严重不匹配：友好提示（第3层硬提示）
@@ -186,6 +219,7 @@ module.exports = {
   isSceneMismatch,
   qualifyFilter,
   calculateWeight,
+  makePoiId,
   // 暴露子函数便于单元测试
   distanceScore,
   qualityScore,
