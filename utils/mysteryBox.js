@@ -34,13 +34,16 @@ function longTailBonus(poi) {
   return isChain ? 0.2 : 1.0;
 }
 
-// 时段感知加权：匹配当前时段 ×1.3，不匹配 ×0.7（软引导，不硬过滤）
+// 时段感知加权：匹配当前时段 ×1.2，不匹配 ×0.85（软引导，不硬过滤）
+// 系数经 06-21-mystery-scene-tuning 调整：原 1.3/0.7 惩罚不对称且过重，
+// 导致近距好店因品类词未命中（如"面馆"未命中午餐"面食"）被远处匹配店反超。
+// 弱化惩罚后软引导仍生效，但未命中好店不再被严重压制。
 function timeAwareMultiplier(poi, currentScene) {
   const keywords = SCENE_KEYWORDS[currentScene];
   if (!keywords) return 1.0; // 随便吃点 / 未知场景不加权
   const haystack = (poi.name || '') + (poi.type || '') + (poi.typecode || '');
   const isMatch = keywords.some((k) => haystack.indexOf(k) >= 0);
-  return isMatch ? 1.3 : 0.7;
+  return isMatch ? 1.2 : 0.85;
 }
 
 // ===== 质量门槛 =====
