@@ -4,7 +4,9 @@
 
 const mb = require('../../utils/mysteryBox.js');
 const locHelper = require('../../utils/locationHelper.js');
+const commercialHelper = require('../../utils/commercialHelper.js');
 const { SCENES } = require('../../config/sceneKeywords.js');
+const { normalizePoiType } = require('../../utils/util.js');
 
 // 按时段自动检测场景（与 index.js 保持一致）
 function detectScene() {
@@ -29,6 +31,114 @@ function formatRating(r) {
   return r ? r.toFixed(1) : '无评分';
 }
 
+// 时间补零：喂给 AI 的时间文本，让它"识相"
+function pad2(n) {
+  return n < 10 ? '0' + n : '' + n;
+}
+
+// 为盲盒揭晓构造 AI prompt。
+// 盲盒的卖点不是"最优"，而是"惊喜"——所以 system prompt 引导模型
+// 写出"为什么这家值得碰碰运气/换个口味"的语气，而非强调评分距离。
+function buildMysteryPrompt(poi, scene) {
+  const now = new Date();
+  const timeText = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  const weekdayText = '周' + '日一二三四五六'[now.getDay()];
+  const type = normalizePoiType(poi.type);
+  const ratingText = poi.rating ? poi.rating.toFixed(1) + '分' : '暂无评分';
+  const costText = poi.cost ? poi.cost + '元/人' : '人均未知';
+
+  const messages = [
+    {
+      role: 'system',
+      content:
+        '你是一个爱探索美食的朋友，刚刚帮用户开了一个"美食盲盒"——随机开出了附近一家店。' +
+        '这家店不一定是评分最高的，但开出来了就是缘分。用一句话（20 字以内）告诉用户' +
+        '为什么这家值得去试试，语气要带点惊喜感和"既然开出来了就去呗"的洒脱，' +
+        '别复述评分距离。必须严格返回 JSON：{"reason":"一句话"}。'
+    },
+    {
+      role: 'user',
+      content: JSON.stringify({
+        scene,
+        time: timeText,
+        weekday: weekdayText,
+        shop: {
+          name: poi.name || '',
+          type,
+          distance: poi.distance,
+          rating: poi.rating,
+          cost: poi.cost
+        }
+      })
+    }
+  ];
+  return messages;
+}
+
+// 调 AI 取盲盒惊喜理由。失败/超时一律 resolve(null)，由调用方回退本地模板。
+// 返回 Promise<string|null>。
+async function callMysteryAIReason(poi, scene) {
+  try {
+    const messages = buildMysteryPrompt(poi, scene);
+    const model = wx.cloud.extend.AI.createModel('cloudbase');
+    const res = await model.streamText({
+      data: {
+        model: 'hy3-preview',
+        messages,
+        stream: true,
+        response_format: { type: 'json_object' }
+      }
+    });
+
+    let fullContent = '';
+    const collectChunk = (chunk) => {
+      if (chunk && typeof chunk === 'string') fullContent += chunk;
+    };
+
+    // 优先 textStream（纯文本增量，最稳）
+    if (res && res.textStream) {
+      try {
+        for await (const chunk of res.textStream) collectChunk(chunk);
+      } catch (e) { /* 回退 eventStream */ }
+    }
+    if (!fullContent && res && res.eventStream) {
+      for await (let event of res.eventStream) {
+        if (event == null) continue;
+        if (event.data === '[DONE]') break;
+        let data = event.data;
+        if (typeof data === 'string') {
+          if (data === '[DONE]' || !data.trim()) continue;
+          try { data = JSON.parse(data); } catch (e) { continue; }
+        }
+        if (data == null || typeof data !== 'object') continue;
+        const content = data?.choices?.[0]?.delta?.content ||
+                        data?.choices?.[0]?.message?.content ||
+                        data?.content;
+        collectChunk(content);
+      }
+    }
+
+    if (!fullContent || !fullContent.trim()) return null;
+
+    // 解析 {reason: "..."}；兼容 markdown 围栏和前后噪声
+    const cleaned = fullContent.replace(/[\u200b-\u200d\ufeff]/g, '').trim();
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      if (fence) {
+        try { parsed = JSON.parse(fence[1].trim()); } catch (e2) { parsed = null; }
+      }
+    }
+    const reason = parsed && typeof parsed.reason === 'string' ? parsed.reason.trim() : '';
+    return reason || null;
+  } catch (e) {
+    console.log('[mystery] AI reason 失败，回退本地模板:', e.message);
+    return null;
+  }
+}
+
 Page({
   data: {
     scene: '随便吃点',
@@ -46,11 +156,15 @@ Page({
       lastOpenTime: 0,
       cooldownTime: 2000,
       poolExhausted: false
-    }
+    },
+    // CPS 红包入口（与 index 页共享逻辑）
+    platformButtons: [],
+    showCouponPicker: false
   },
 
   onLoad() {
     this.setData({ scene: detectScene(), sceneShort: sceneLabel(detectScene()) });
+    this.setData({ platformButtons: commercialHelper.getPlatformButtons() });
   },
 
   onShow() {
@@ -155,21 +269,40 @@ Page({
 
     wx.vibrateShort({ type: 'medium', fail: () => {} });
 
+    // 探索档（次优但有趣的店）：并行发起 AI 惊喜理由请求。
+    // 与 2s 开盒动画并行，不额外增加用户等待。揭晓时若 AI 已就绪则用，
+    // 否则用本地模板——失败/超时不阻塞开盒体验。
+    // 利用档（高分店）直接用本地模板，把 AI 成本花在惊喜店上。
+    let aiReasonPromise = null;
+    if (result.fromExplore) {
+      aiReasonPromise = callMysteryAIReason(result.poi, this.data.scene);
+    }
+
     setTimeout(() => {
-      this._revealMysteryBox(result);
+      this._revealMysteryBox(result, aiReasonPromise);
     }, 2000);
   },
 
-  _revealMysteryBox(result) {
+  async _revealMysteryBox(result, aiReasonPromise) {
     const poi = result.poi;
-    const reason = mb.generateMysteryReason(poi, this.data.scene);
     const poiScene = mb.detectPoiScene(poi);
     const isMismatch = mb.isSceneMismatch(poiScene, this.data.scene);
+
+    // 本地模板理由（保底，一定能拿到）
+    const fallbackReason = mb.generateMysteryReason(poi, this.data.scene);
+
+    // 场景严重不匹配（如夜宵时段开出早餐店）一律用模板的硬提示，不覆盖
+    let reason = fallbackReason;
+    if (!isMismatch && aiReasonPromise) {
+      // 探索档：等 AI 结果（2s 动画期内大概率已返回）
+      const aiReason = await aiReasonPromise;
+      if (aiReason) reason = aiReason;
+    }
 
     const cardView = {
       poi_id: result.poi_id,
       name: poi.name || '未知店铺',
-      type: poi.type || '餐饮',
+      type: normalizePoiType(poi.type),
       address: poi.address || '',
       location: poi.location || '',
       distanceText: formatDistance(poi.distance),
@@ -231,5 +364,20 @@ Page({
       data: card.address || card.name,
       success: () => wx.showToast({ title: '地址已复制', icon: 'success' })
     });
+  },
+
+  // 平台级「领红包」入口点击（与 index 页逻辑一致）
+  onOpenPlatform(e) {
+    const key = e.currentTarget.dataset.key;
+    const platform = (this.data.platformButtons || []).find((p) => p.key === key);
+    commercialHelper.openEntry(platform);
+    if (this.data.showCouponPicker) {
+      this.setData({ showCouponPicker: false });
+    }
+  },
+
+  // 红包选择弹窗显隐切换
+  onToggleCouponPicker() {
+    this.setData({ showCouponPicker: !this.data.showCouponPicker });
   }
 });

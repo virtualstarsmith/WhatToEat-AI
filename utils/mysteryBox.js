@@ -100,7 +100,9 @@ function weightedRandomPick(candidates) {
 // pois: getPoi 返回的标准化 POI 数组
 // openedIds: 本次会话已开过的 poi_id 字符串数组（用于去重）
 // currentScene: 当前时段场景（'早餐' | '午餐' | ...）
-// 返回: { poi_id, poi } 或 null（池子耗尽）
+// 返回: { poi_id, poi, fromExplore } 或 null（池子耗尽）
+//   fromExplore=true 表示本次由"探索档"选出（次优但有趣），页面据此决定
+//   是否调 AI 生成惊喜理由——把 AI 成本花在刀刃上，而非每次开盒都调。
 function mysteryBoxRecommend(pois, openedIds, currentScene) {
   const epsilon = 0.3; // 30% 探索 / 70% 利用
 
@@ -124,11 +126,13 @@ function mysteryBoxRecommend(pois, openedIds, currentScene) {
     // 探索：中段探索，而非纯随机。
     // 按权重升序排序后取 30%~70% 分位的中段池随机选——既避免纯随机开出离谱结果，
     // 又能开出"纯利用"选不到的次优好店，保留盲盒惊喜性。
-    return midBandPick(weighted);
+    const picked = midBandPick(weighted);
+    return { poi_id: picked.poi_id, poi: picked.poi, fromExplore: true };
   }
 
   // 利用：加权随机
-  return weightedRandomPick(weighted);
+  const picked = weightedRandomPick(weighted);
+  return { poi_id: picked.poi_id, poi: picked.poi, fromExplore: false };
 }
 
 // 中段探索：按权重升序排序，从 30%~70% 分位的子集里随机挑一个。

@@ -33,9 +33,9 @@
       </scroll-view>
     </view>
 
-    <!-- 兜底提示 -->
+    <!-- 兜底提示：不暴露"失败"，用中性语气承接，避免戳破推荐的连续感 -->
     <view class="banner-fallback" wx:if="{{source === 'fallback' && cardsView.length > 0}}">
-      💬 智能推荐暂不可用，已为你按距离和评分筛选
+      💬 为你又挑了几家，看看哪家合口味
     </view>
 
     <!-- 刷新提示（有旧推荐时，保留旧推荐 + 顶部小加载条） -->
@@ -52,20 +52,6 @@
     <view class="hint hint-error" wx:if="{{error && !loading}}">
       <text>{{error}}</text>
       <view class="btn-retry" bindtap="onRefresh">重试</view>
-    </view>
-
-    <!-- 外卖红包（平台级 CPS 入口，配置齐全时展示） -->
-    <view class="coupon-bar" wx:if="{{cardsView.length > 0 && platformButtons.length > 0}}">
-      <text class="coupon-bar-title">🎁 领红包下单更省</text>
-      <view class="coupon-btns">
-        <view
-          wx:for="{{platformButtons}}"
-          wx:key="key"
-          class="coupon-btn"
-          data-key="{{item.key}}"
-          bindtap="onOpenPlatform"
-        >{{item.label}}</view>
-      </view>
     </view>
 
     <!-- 推荐卡片（loading 时也保留显示，避免刷新时推荐消失） -->
@@ -108,4 +94,29 @@
       </button>
     </view>
   </scroll-view>
+
+  <!-- 悬浮红包按钮（平台级 CPS 入口，配置齐全时展示；常驻右下角） -->
+  <view
+    class="float-coupon"
+    wx:if="{{platformButtons.length > 0}}"
+    bindtap="onToggleCouponPicker"
+  >
+    <text class="float-coupon-icon">🧧</text>
+    <text class="float-coupon-badge" wx:if="{{platformButtons.length > 1}}">{{platformButtons.length}}</text>
+  </view>
+
+  <!-- 红包选择弹窗（底部 action-sheet） -->
+  <view class="coupon-mask {{showCouponPicker ? 'coupon-mask-show' : ''}}" bindtap="onToggleCouponPicker">
+    <view class="coupon-picker {{showCouponPicker ? 'coupon-picker-show' : ''}}" catchtap="">
+      <view class="coupon-picker-title">🎁 领外卖红包下单更省</view>
+      <view
+        wx:for="{{platformButtons}}"
+        wx:key="key"
+        class="coupon-picker-item"
+        data-key="{{item.key}}"
+        bindtap="onOpenPlatform"
+      >{{item.label}}</view>
+      <view class="coupon-picker-cancel" catchtap="onToggleCouponPicker">取消</view>
+    </view>
+  </view>
 </view>
