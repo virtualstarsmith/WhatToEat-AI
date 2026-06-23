@@ -87,6 +87,41 @@ Codified by `06-24-scoring-module` after `distanceScore`/`qualityScore` were fou
 
 ---
 
+## Scenes — Single Source (`config/scenes.js`), canonical+alias matching
+
+Dining-scene definitions live in **one** place: `config/scenes.js`. It exports `SCENES` (6 scene declarations), `SCENE_NAMES`, `getScene(name)`, and `matchesScene(sceneName, poi)`. Each scene object carries the full spec: `name, toneClass, reasonTone, match { canonical: [alias...] }, weights, conflicts`. The old flat `config/sceneKeywords.js` is **deleted**; do not reintroduce it.
+
+**Matching = canonical + alias union (substring `indexOf`), NOT word-boundary regex.** Adding a synonymous category (e.g. a new noodle-shop variant) means appending one alias under the right canonical — zero algorithm change. This is what fixed the 06-21 "面馆≠面食" root cause (previously patched by hand-stuffing keywords).
+
+**Rules:**
+
+- All scene matching (page multipliers, mystery `detectPoiScene`, conflict check) MUST call `matchesScene`. Do not write a new `keywords.some(k => haystack.indexOf(k))` loop.
+- Page multipliers keep their own **coefficients** (index `sceneMultiplier` 1.0/0.5 hard; mystery `timeAwareMultiplier` 1.2/0.85 soft) — only the *matching* is unified, not the coefficients.
+- `conflicts` is declared per scene and is treated symmetrically by `isSceneMismatch`. Cover all 6 scenes.
+- Matching set only **expands** (alias union). A POI that matched before still matches.
+
+Codified by `06-24-scene-system`.
+
+---
+
+## Shared Page Utilities & Components
+
+**`utils/recommend.js`** holds page-shared pure helpers: `detectScene()`, `formatDistance(d)`, `formatRating(r)`, `pad2(n)`. The two pages previously duplicated these verbatim (with `detectScene` byte-identical). Import from here; do not redefine.
+
+**`utils/aiRecommend.js`** is the single AI-call layer: `parseRecommendJson` (4-tier tolerant fallback), `tolerantParseRecommendations`, `streamAiText` (wx.cloud cloudbase textStream→eventStream dual-path accumulation), `callAiRecommend`. Both pages call it; the prompt is injected via the caller's messages. `parseRecommendJson` is a pure function with no wx dependency — **tests `require` it, they do not copy it**.
+
+**Components** `components/restaurant-card` (props `card`/`variant` 'index'|'mystery'/'isMismatch`; events `navigate`/`copyaddr`/`coupon`) and `components/coupon-float` (props `platforms`/`show`; events `toggle`/`open`) are registered globally in `app.json` `usingComponents`. They reuse global `app.wxss` classes via `options.addGlobalClass: true` — do not duplicate card styles into the component wxss.
+
+**Rules:**
+
+- `callAIRecommend`/`callMysteryAIReason` delegate streaming to `streamAiText`; do not re-inline `createModel`/`streamText`/the accumulation loop.
+- New AI-call consumers inject their prompt via `callAiRecommend({ messages })`; do not copy the streaming logic.
+- Card/coupon UI edits happen in the component, not duplicated per page.
+
+Codified by `06-24-recommend-module` and `06-24-ai-recommend`.
+
+---
+
 ## Common Mistakes
 
 Do not mutate `this.data` directly. Use `this.setData()` for values rendered by WXML so the view updates consistently.
