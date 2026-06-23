@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 1
-- **Last Active**: 2026-06-21
+- **Total Sessions**: 2
+- **Last Active**: 2026-06-24
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~41 | Active |
+| `journal-1.md` | ~115 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 2 | 2026-06-24 | 推荐域规格化重构·子任务①poi_id稳定性 | `980130f` | `feat/ai-recommend-experience` |
 | 1 | 2026-06-21 | 盲盒推荐算法 review 与时段加权优化 | `e9d7655`, `1da5ace` | `main` |
 <!-- @@@/auto:session-history -->
 
