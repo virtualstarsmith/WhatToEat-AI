@@ -5,7 +5,7 @@
 const mb = require('../../utils/mysteryBox.js');
 const locHelper = require('../../utils/locationHelper.js');
 const commercialHelper = require('../../utils/commercialHelper.js');
-const { SCENES } = require('../../config/sceneKeywords.js');
+const { SCENE_NAMES } = require('../../config/scenes.js');
 const { normalizePoiType } = require('../../utils/util.js');
 
 // 按时段自动检测场景（与 index.js 保持一致）
