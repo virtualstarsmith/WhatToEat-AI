@@ -48,6 +48,25 @@ No server state layer exists yet. When real recommendation APIs are introduced, 
 
 ---
 
+## POI Identity — Stable poi_id, Never Array Index
+
+A POI's identity (`poi_id`) must be a **stable unique identifier**, never the array index. Index-based ids drift the moment the POI pool is re-fetched, re-paginated, or re-sorted, which silently breaks session de-duplication (the same shop gets re-recommended, or fresh shops get wrongly excluded).
+
+**Single source of truth — `utils/util.js` `makePoiId(poi)`:**
+
+- Priority: high-de `poi.poi_id` (the Amap global id, transparently passed through by `cloudfunctions/getPoi/index.js` `normalizePoi`).
+- Fallback: composite key `${location}|${name}` (matches getPoi's own cross-page dedup key) when `poi_id` is missing.
+
+**Rules:**
+
+- Every place that needs a per-POI id (scoring, candidate maps, exclude sets, opened-box dedup, AI response join) MUST call `makePoiId(poi)`. Do not re-derive the key locally.
+- `cloudfunctions/getPoi/index.js` `normalizePoi` MUST keep passing `poi.id` through as `poi_id`; new POI sources must populate `poi_id` too.
+- `excludeIds` / `openedIds` are page-local session state and are **not** persisted across app launches, so there is no storage migration concern when the id scheme changes.
+
+This was originally codified in `.trellis/tasks/06-14-mystery-box-feature/design.md` and re-affirmed by `06-24-poi-id-stable` after the index page was found violating it (`String(idx)`). Do not reintroduce array-index ids.
+
+---
+
 ## Common Mistakes
 
 Do not mutate `this.data` directly. Use `this.setData()` for values rendered by WXML so the view updates consistently.

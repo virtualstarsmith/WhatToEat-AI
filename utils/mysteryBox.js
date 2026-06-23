@@ -3,7 +3,7 @@
 // 详见 .trellis/tasks/06-14-mystery-box-feature/design.md §3
 
 const { SCENE_KEYWORDS } = require('../config/sceneKeywords.js');
-const { normalizePoiType } = require('./util.js');
+const { normalizePoiType, makePoiId } = require('./util.js');
 
 // ===== 评分相关（复用 index.js 既有公式）=====
 
@@ -59,14 +59,8 @@ function qualifyFilter(poi) {
 }
 
 // ===== 稳定标识 =====
-
-// 生成 POI 稳定唯一标识。
-// 复合键 `location|name`，与云函数 getPoi/index.js 的去重键完全一致。
-// 用它而非数组下标，可保证池子顺序变化（刷新/翻页/切定位）后同一店铺仍为同一 id，
-// 从而让会话去重真正生效。
-function makePoiId(poi) {
-  return `${poi.location || ''}|${poi.name || ''}`;
-}
+// makePoiId 现统一从 utils/util.js 引入（poi_id 优先 / location|name 兜底），
+// 见 06-24-poi-id-stable。本模块仅消费，不再自定义。
 
 // ===== 权重计算 =====
 

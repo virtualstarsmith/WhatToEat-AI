@@ -5,7 +5,7 @@
 const { SCENE_KEYWORDS, SCENES } = require('../../config/sceneKeywords.js');
 const locHelper = require('../../utils/locationHelper.js');
 const commercialHelper = require('../../utils/commercialHelper.js');
-const { normalizePoiType } = require('../../utils/util.js');
+const { normalizePoiType, makePoiId } = require('../../utils/util.js');
 
 const SCENE_TONE_MAP = {
   '随便吃点': 'tone-warm',
@@ -42,14 +42,15 @@ function sceneMultiplier(scene, poi) {
 }
 
 function scoreCandidates(pois, scene, excludeIds) {
-  // poi_id 统一为字符串，避免下游 Map 查找时 string/number 类型不一致
+  // poi_id 用稳定唯一标识（高德 id 优先 / location|name 兜底），见 06-24-poi-id-stable。
+  // 严禁用数组下标——池子顺序变化（刷新/翻页）会导致去重失效/误删。
   const excludeSet = new Set((excludeIds || []).map((id) => String(id)));
   const keywords = SCENE_KEYWORDS[scene];
-  return pois.map((poi, idx) => {
+  return pois.map((poi) => {
     const base = 0.5 * distanceScore(poi.distance) + 0.5 * qualityScore(poi.rating);
     const mult = sceneMultiplier(scene, poi);
     let score = base * mult;
-    const poiId = String(idx);
+    const poiId = makePoiId(poi);
     if (excludeSet.has(poiId)) score *= 0.6;
     // 标记是否命中当前场景关键词，供 topNWithExplore 划分匹配档/探索档
     const matched = !keywords || mult > 1.0 ||

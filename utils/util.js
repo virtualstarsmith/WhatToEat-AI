@@ -82,8 +82,19 @@ function normalizePoiType(rawType) {
   return POI_TYPE_MAP[segs[0]] || segs[0];
 }
 
+// 生成 POI 稳定唯一标识。
+// 策略：优先用高德 poi_id（getPoi 透传的全局唯一 id，最权威）；缺失时回退
+// 复合键 `location|name`（与 getPoi/index.js 跨页去重键、旧盲盒实现一致）。
+// 用它而非数组下标，可保证池子顺序变化（刷新/翻页/切定位）后同一店铺仍为同一 id，
+// 从而让会话去重真正生效。见 06-14 design.md:202 与 06-24-poi-id-stable。
+function makePoiId(poi) {
+  if (poi && poi.poi_id) return String(poi.poi_id);
+  return `${poi.location || ''}|${poi.name || ''}`;
+}
+
 module.exports = {
   formatTime,
   pickRandom,
-  normalizePoiType
+  normalizePoiType,
+  makePoiId
 };

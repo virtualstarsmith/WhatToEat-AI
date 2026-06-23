@@ -53,6 +53,9 @@ function normalizePoi(poi) {
   const ratingStr = ext.rating;
   const costStr = ext.cost;
   return {
+    // 高德 POI 全局唯一 id，供客户端作稳定 poi_id（缺失时客户端兜底 location|name）。
+    // 见 06-24-poi-id-stable：poi_id 必须稳定，禁止用数组下标。
+    poi_id: poi.id || '',
     name: poi.name || '',
     address: poi.address || '',
     location: poi.location || '',
