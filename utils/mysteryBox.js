@@ -2,20 +2,11 @@
 // 基于 E&E（探索与利用）最佳实践：Epsilon-Greedy + 长尾加权 + 会话去重
 // 详见 .trellis/tasks/06-14-mystery-box-feature/design.md §3
 
-const { SCENE_KEYWORDS } = require('../config/sceneKeywords.js');
-const { normalizePoiType } = require('./util.js');
+const { matchesScene, getScene, SCENE_NAMES } = require('../config/scenes.js');
+const { normalizePoiType, makePoiId } = require('./util.js');
+const { distanceScore, qualityScore } = require('./scoring.js');
 
-// ===== 评分相关（复用 index.js 既有公式）=====
-
-// 距离评分：指数衰减，800m 约步行 10 分钟
-function distanceScore(distance) {
-  return Math.exp(-distance / 800);
-}
-
-// 质量评分：无评分给 0.3（降权而非中位数）
-function qualityScore(rating) {
-  return rating ? rating / 5.0 : 0.3;
-}
+// ===== 评分原语（自 utils/scoring.js 引入，与首页同源，见 06-24-scoring-module）=====
 
 // ===== 盲盒专属加权 =====
 
@@ -39,11 +30,10 @@ function longTailBonus(poi) {
 // 导致近距好店因品类词未命中（如"面馆"未命中午餐"面食"）被远处匹配店反超。
 // 弱化惩罚后软引导仍生效，但未命中好店不再被严重压制。
 function timeAwareMultiplier(poi, currentScene) {
-  const keywords = SCENE_KEYWORDS[currentScene];
-  if (!keywords) return 1.0; // 随便吃点 / 未知场景不加权
-  const haystack = (poi.name || '') + (poi.type || '') + (poi.typecode || '');
-  const isMatch = keywords.some((k) => haystack.indexOf(k) >= 0);
-  return isMatch ? 1.2 : 0.85;
+  // 系数（1.2/0.85）不变；匹配算法统一走 config/scenes.js 的 matchesScene（canonical+alias）。
+  // 随便吃点 / 未知场景（空 match）matchesScene 恒 true → 不施加软引导。
+  if (matchesScene(currentScene, poi)) return 1.2;
+  return 0.85;
 }
 
 // ===== 质量门槛 =====
@@ -59,14 +49,8 @@ function qualifyFilter(poi) {
 }
 
 // ===== 稳定标识 =====
-
-// 生成 POI 稳定唯一标识。
-// 复合键 `location|name`，与云函数 getPoi/index.js 的去重键完全一致。
-// 用它而非数组下标，可保证池子顺序变化（刷新/翻页/切定位）后同一店铺仍为同一 id，
-// 从而让会话去重真正生效。
-function makePoiId(poi) {
-  return `${poi.location || ''}|${poi.name || ''}`;
-}
+// makePoiId 现统一从 utils/util.js 引入（poi_id 优先 / location|name 兜底），
+// 见 06-24-poi-id-stable。本模块仅消费，不再自定义。
 
 // ===== 权重计算 =====
 
@@ -100,7 +84,9 @@ function weightedRandomPick(candidates) {
 // pois: getPoi 返回的标准化 POI 数组
 // openedIds: 本次会话已开过的 poi_id 字符串数组（用于去重）
 // currentScene: 当前时段场景（'早餐' | '午餐' | ...）
-// 返回: { poi_id, poi } 或 null（池子耗尽）
+// 返回: { poi_id, poi, fromExplore } 或 null（池子耗尽）
+//   fromExplore=true 表示本次由"探索档"选出（次优但有趣），页面据此决定
+//   是否调 AI 生成惊喜理由——把 AI 成本花在刀刃上，而非每次开盒都调。
 function mysteryBoxRecommend(pois, openedIds, currentScene) {
   const epsilon = 0.3; // 30% 探索 / 70% 利用
 
@@ -124,11 +110,13 @@ function mysteryBoxRecommend(pois, openedIds, currentScene) {
     // 探索：中段探索，而非纯随机。
     // 按权重升序排序后取 30%~70% 分位的中段池随机选——既避免纯随机开出离谱结果，
     // 又能开出"纯利用"选不到的次优好店，保留盲盒惊喜性。
-    return midBandPick(weighted);
+    const picked = midBandPick(weighted);
+    return { poi_id: picked.poi_id, poi: picked.poi, fromExplore: true };
   }
 
   // 利用：加权随机
-  return weightedRandomPick(weighted);
+  const picked = weightedRandomPick(weighted);
+  return { poi_id: picked.poi_id, poi: picked.poi, fromExplore: false };
 }
 
 // 中段探索：按权重升序排序，从 30%~70% 分位的子集里随机挑一个。
@@ -148,14 +136,13 @@ function midBandPick(weighted) {
 
 // ===== 场景识别辅助 =====
 
-// 检测某 POI 所属的用餐场景（基于关键词）
+// 检测某 POI 所属的用餐场景（基于 canonical+alias）
 function detectPoiScene(poi) {
-  const haystack = (poi.name || '') + (poi.type || '') + (poi.typecode || '');
-  for (const scene of Object.keys(SCENE_KEYWORDS)) {
-    const keywords = SCENE_KEYWORDS[scene];
-    if (!keywords) continue;
-    if (keywords.some((k) => haystack.indexOf(k) >= 0)) {
-      return scene;
+  for (const sceneName of SCENE_NAMES) {
+    const scene = getScene(sceneName);
+    if (!scene || !scene.match || Object.keys(scene.match).length === 0) continue; // 跳过 随便吃点（空 match 恒 true）
+    if (matchesScene(sceneName, poi)) {
+      return sceneName;
     }
   }
   return ''; // 无法识别
@@ -163,18 +150,16 @@ function detectPoiScene(poi) {
 
 // 判断 POI 场景与当前时段是否严重不匹配
 // 只在"明确属于某场景"且"与当前时段明显冲突"时返回 true
+// 冲突规则统一来自 config/scenes.js 的 scene.conflicts（已补全 6 场景）。
 function isSceneMismatch(poiScene, currentScene) {
   if (!poiScene || !currentScene) return false;
   if (poiScene === currentScene) return false;
-
-  // 定义严重冲突的场景对（时段完全相反）
-  const conflicts = {
-    '早餐': ['夜宵'],
-    '夜宵': ['早餐'],
-    '下午茶/饮品': ['早餐', '夜宵']
-  };
-  const conflictList = conflicts[currentScene] || [];
-  return conflictList.indexOf(poiScene) >= 0;
+  // 冲突是对称的：任一方声明与另一方冲突即视为严重不匹配（早餐↔夜宵、下午茶↔早餐/夜宵）。
+  const cur = getScene(currentScene);
+  const poi = getScene(poiScene);
+  const curConflicts = (cur && cur.conflicts) || [];
+  const poiConflicts = (poi && poi.conflicts) || [];
+  return curConflicts.indexOf(poiScene) >= 0 || poiConflicts.indexOf(currentScene) >= 0;
 }
 
 // ===== 推荐理由生成（模板化，不调用 AI）=====

@@ -1,0 +1,4 @@
+/* restaurant-card 复用全局 app.wxss 的 .card/.card-header/.action-btn 等类
+   （通过 options.addGlobalClass=true），故组件 wxss 仅放组件专属微调。
+   mystery-card / card-mismatch 样式见 pages/mystery/mystery.wxss（仅盲盒页使用，
+   因 mystery 页设置 apply-shared，组件可继承）。本文件保持空。 */

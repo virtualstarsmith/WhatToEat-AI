@@ -8,3 +8,4 @@ coverage/
 project.private.config.json
 *.local
 *.log
+.worktrees/

@@ -4,29 +4,86 @@
 
 const mb = require('../../utils/mysteryBox.js');
 const locHelper = require('../../utils/locationHelper.js');
-const { SCENES } = require('../../config/sceneKeywords.js');
-
-// 按时段自动检测场景（与 index.js 保持一致）
-function detectScene() {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 10) return '早餐';
-  if (hour >= 10 && hour < 14) return '午餐';
-  if (hour >= 14 && hour < 17) return '下午茶/饮品';
-  if (hour >= 17 && hour < 21) return '晚餐';
-  return '夜宵';
-}
+const commercialHelper = require('../../utils/commercialHelper.js');
+const { normalizePoiType } = require('../../utils/util.js');
+const { detectScene, formatDistance, formatRating, pad2 } = require('../../utils/recommend.js');
+const { streamAiText } = require('../../utils/aiRecommend.js');
 
 function sceneLabel(scene) {
   return scene === '下午茶/饮品' ? '下午茶' : scene;
 }
 
-function formatDistance(d) {
-  if (d == null) return '';
-  return d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m';
+// detectScene / formatDistance / formatRating / pad2 已抽到 utils/recommend.js 共享
+// （见 06-24-recommend-module）。buildMysteryPrompt 内的 pad2 调用自动解析到共享版。
+
+// 为盲盒揭晓构造 AI prompt。
+// 盲盒的卖点不是"最优"，而是"惊喜"——所以 system prompt 引导模型
+// 写出"为什么这家值得碰碰运气/换个口味"的语气，而非强调评分距离。
+function buildMysteryPrompt(poi, scene) {
+  const now = new Date();
+  const timeText = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  const weekdayText = '周' + '日一二三四五六'[now.getDay()];
+  const type = normalizePoiType(poi.type);
+  const ratingText = poi.rating ? poi.rating.toFixed(1) + '分' : '暂无评分';
+  const costText = poi.cost ? poi.cost + '元/人' : '人均未知';
+
+  const messages = [
+    {
+      role: 'system',
+      content:
+        '你是一个爱探索美食的朋友，刚刚帮用户开了一个"美食盲盒"——随机开出了附近一家店。' +
+        '这家店不一定是评分最高的，但开出来了就是缘分。用一句话（20 字以内）告诉用户' +
+        '为什么这家值得去试试，语气要带点惊喜感和"既然开出来了就去呗"的洒脱，' +
+        '别复述评分距离。必须严格返回 JSON：{"reason":"一句话"}。'
+    },
+    {
+      role: 'user',
+      content: JSON.stringify({
+        scene,
+        time: timeText,
+        weekday: weekdayText,
+        shop: {
+          name: poi.name || '',
+          type,
+          distance: poi.distance,
+          rating: poi.rating,
+          cost: poi.cost
+        }
+      })
+    }
+  ];
+  return messages;
 }
 
-function formatRating(r) {
-  return r ? r.toFixed(1) : '无评分';
+// 调 AI 取盲盒惊喜理由。失败/超时一律 resolve(null)，由调用方回退本地模板。
+// 返回 Promise<string|null>。
+async function callMysteryAIReason(poi, scene) {
+  try {
+    const messages = buildMysteryPrompt(poi, scene);
+    // 流式收集复用 utils/aiRecommend.streamAiText（与首页同源，消除双份复制）。
+    // reason 提取保留盲盒自己的逻辑（取 reason 字段，与首页取 recommendations[] 不同，
+    // 故不套 parseRecommendJson）。见 06-24-ai-recommend。
+    const fullContent = await streamAiText(messages, {});
+
+    if (!fullContent || !fullContent.trim()) return null;
+
+    // 解析 {reason: "..."}；兼容 markdown 围栏和前后噪声
+    const cleaned = fullContent.replace(/[\u200b-\u200d\ufeff]/g, '').trim();
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      if (fence) {
+        try { parsed = JSON.parse(fence[1].trim()); } catch (e2) { parsed = null; }
+      }
+    }
+    const reason = parsed && typeof parsed.reason === 'string' ? parsed.reason.trim() : '';
+    return reason || null;
+  } catch (e) {
+    console.log('[mystery] AI reason 失败，回退本地模板:', e.message);
+    return null;
+  }
 }
 
 Page({
@@ -46,11 +103,15 @@ Page({
       lastOpenTime: 0,
       cooldownTime: 2000,
       poolExhausted: false
-    }
+    },
+    // CPS 红包入口（与 index 页共享逻辑，用 coupon-float 组件渲染）
+    platformButtons: [],
+    showCouponPicker: false
   },
 
   onLoad() {
     this.setData({ scene: detectScene(), sceneShort: sceneLabel(detectScene()) });
+    this.setData({ platformButtons: commercialHelper.getPlatformButtons() });
   },
 
   onShow() {
@@ -155,21 +216,40 @@ Page({
 
     wx.vibrateShort({ type: 'medium', fail: () => {} });
 
+    // 探索档（次优但有趣的店）：并行发起 AI 惊喜理由请求。
+    // 与 2s 开盒动画并行，不额外增加用户等待。揭晓时若 AI 已就绪则用，
+    // 否则用本地模板——失败/超时不阻塞开盒体验。
+    // 利用档（高分店）直接用本地模板，把 AI 成本花在惊喜店上。
+    let aiReasonPromise = null;
+    if (result.fromExplore) {
+      aiReasonPromise = callMysteryAIReason(result.poi, this.data.scene);
+    }
+
     setTimeout(() => {
-      this._revealMysteryBox(result);
+      this._revealMysteryBox(result, aiReasonPromise);
     }, 2000);
   },
 
-  _revealMysteryBox(result) {
+  async _revealMysteryBox(result, aiReasonPromise) {
     const poi = result.poi;
-    const reason = mb.generateMysteryReason(poi, this.data.scene);
     const poiScene = mb.detectPoiScene(poi);
     const isMismatch = mb.isSceneMismatch(poiScene, this.data.scene);
+
+    // 本地模板理由（保底，一定能拿到）
+    const fallbackReason = mb.generateMysteryReason(poi, this.data.scene);
+
+    // 场景严重不匹配（如夜宵时段开出早餐店）一律用模板的硬提示，不覆盖
+    let reason = fallbackReason;
+    if (!isMismatch && aiReasonPromise) {
+      // 探索档：等 AI 结果（2s 动画期内大概率已返回）
+      const aiReason = await aiReasonPromise;
+      if (aiReason) reason = aiReason;
+    }
 
     const cardView = {
       poi_id: result.poi_id,
       name: poi.name || '未知店铺',
-      type: poi.type || '餐饮',
+      type: normalizePoiType(poi.type),
       address: poi.address || '',
       location: poi.location || '',
       distanceText: formatDistance(poi.distance),
@@ -231,5 +311,20 @@ Page({
       data: card.address || card.name,
       success: () => wx.showToast({ title: '地址已复制', icon: 'success' })
     });
+  },
+
+  // 平台级「领红包」入口点击（coupon-float 组件 triggerEvent('open', { key })）
+  onOpenPlatform(e) {
+    const key = e.detail.key;
+    const platform = (this.data.platformButtons || []).find((p) => p.key === key);
+    commercialHelper.openEntry(platform);
+    if (this.data.showCouponPicker) {
+      this.setData({ showCouponPicker: false });
+    }
+  },
+
+  // 红包选择弹窗显隐切换（coupon-float 组件 triggerEvent('toggle')）
+  onToggleCouponPicker() {
+    this.setData({ showCouponPicker: !this.data.showCouponPicker });
   }
 });

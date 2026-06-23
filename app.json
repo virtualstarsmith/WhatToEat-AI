@@ -37,5 +37,15 @@
   "requiredPrivateInfos": [
     "getLocation",
     "chooseLocation"
-  ]
+  ],
+  "usingComponents": {
+    "restaurant-card": "/components/restaurant-card/index",
+    "coupon-float": "/components/coupon-float/index"
+  },
+  "plugins": {
+    "meishi": {
+      "version": "1.2.5",
+      "provider": "wx5c787b48e6a02a51"
+    }
+  }
 }

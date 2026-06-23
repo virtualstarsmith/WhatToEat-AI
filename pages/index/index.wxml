@@ -33,9 +33,9 @@
       </scroll-view>
     </view>
 
-    <!-- 兜底提示 -->
+    <!-- 兜底提示：不暴露"失败"，用中性语气承接，避免戳破推荐的连续感 -->
     <view class="banner-fallback" wx:if="{{source === 'fallback' && cardsView.length > 0}}">
-      💬 智能推荐暂不可用，已为你按距离和评分筛选
+      💬 为你又挑了几家，看看哪家合口味
     </view>
 
     <!-- 刷新提示（有旧推荐时，保留旧推荐 + 顶部小加载条） -->
@@ -54,51 +54,17 @@
       <view class="btn-retry" bindtap="onRefresh">重试</view>
     </view>
 
-    <!-- 外卖红包（平台级 CPS 入口，配置齐全时展示） -->
-    <view class="coupon-bar" wx:if="{{cardsView.length > 0 && platformButtons.length > 0}}">
-      <text class="coupon-bar-title">🎁 领红包下单更省</text>
-      <view class="coupon-btns">
-        <view
-          wx:for="{{platformButtons}}"
-          wx:key="key"
-          class="coupon-btn"
-          data-key="{{item.key}}"
-          bindtap="onOpenPlatform"
-        >{{item.label}}</view>
-      </view>
-    </view>
-
     <!-- 推荐卡片（loading 时也保留显示，避免刷新时推荐消失） -->
     <view class="cards" wx:if="{{cardsView.length > 0}}">
-      <view
+      <restaurant-card
         wx:for="{{cardsView}}"
-        wx:for-index="idx"
         wx:key="poi_id"
-        class="card"
-      >
-        <view class="card-header">
-          <text class="card-name">{{item.name}}</text>
-          <text class="card-type">{{item.type}}</text>
-        </view>
-        <view class="card-meta">
-          <text class="meta-item">📍 {{item.distanceText}}</text>
-          <text class="meta-item">⭐ {{item.ratingText}}</text>
-          <text class="meta-item" wx:if="{{item.costText}}">💰 {{item.costText}}</text>
-        </view>
-        <view class="card-reason" wx:if="{{item.reason}}">
-          💡 {{item.reason}}
-        </view>
-        <view class="card-actions">
-          <view class="action-btn primary" data-idx="{{idx}}" bindtap="onOpenNav">导航</view>
-          <view class="action-btn" data-idx="{{idx}}" bindtap="onCopyAddr">复制地址</view>
-          <view
-            class="action-btn ghost"
-            wx:if="{{item.shopEntry}}"
-            data-idx="{{idx}}"
-            bindtap="onOpenCommercial"
-          >🎫</view>
-        </view>
-      </view>
+        card="{{item}}"
+        variant="index"
+        bind:navigate="onOpenNav"
+        bind:copyaddr="onCopyAddr"
+        bind:coupon="onOpenCommercial"
+      />
     </view>
 
     <!-- 换一批 -->
@@ -108,4 +74,12 @@
       </button>
     </view>
   </scroll-view>
+
+  <!-- 悬浮红包入口（平台级 CPS，配置齐全时展示）+ 选择弹窗 -->
+  <coupon-float
+    platforms="{{platformButtons}}"
+    show="{{showCouponPicker}}"
+    bind:toggle="onToggleCouponPicker"
+    bind:open="onOpenPlatform"
+  />
 </view>

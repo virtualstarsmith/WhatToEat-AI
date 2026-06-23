@@ -1,0 +1,3 @@
+/* coupon-float 复用全局 .float-coupon/.coupon-mask/.coupon-picker 类
+   （addGlobalClass=true）。当前这些类尚未定义样式，行为等同重构前（未样式化）。
+   待后续补样式时统一写入 app.wxss，不在本组件重复。 */

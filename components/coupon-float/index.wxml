@@ -1,0 +1,24 @@
+<!-- 悬浮红包按钮（平台级 CPS 入口，配置齐全时展示；常驻右下角） -->
+<view
+  class="float-coupon"
+  wx:if="{{platforms.length > 0}}"
+  bindtap="onToggle"
+>
+  <text class="float-coupon-icon">🧧</text>
+  <text class="float-coupon-badge" wx:if="{{platforms.length > 1}}">{{platforms.length}}</text>
+</view>
+
+<!-- 红包选择弹窗（底部 action-sheet） -->
+<view class="coupon-mask {{show ? 'coupon-mask-show' : ''}}" bindtap="onToggle">
+  <view class="coupon-picker {{show ? 'coupon-picker-show' : ''}}" catchtap="">
+    <view class="coupon-picker-title">🎁 领外卖红包下单更省</view>
+    <view
+      wx:for="{{platforms}}"
+      wx:key="key"
+      class="coupon-picker-item"
+      data-key="{{item.key}}"
+      bindtap="onOpen"
+    >{{item.label}}</view>
+    <view class="coupon-picker-cancel" catchtap="onToggle">取消</view>
+  </view>
+</view>

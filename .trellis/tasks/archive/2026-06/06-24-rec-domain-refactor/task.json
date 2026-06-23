@@ -1,0 +1,32 @@
+{
+  "id": "rec-domain-refactor",
+  "name": "rec-domain-refactor",
+  "title": "推荐域规格化重构",
+  "description": "",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "WhatToEat-AI",
+  "assignee": "WhatToEat-AI",
+  "createdAt": "2026-06-24",
+  "completedAt": "2026-06-24",
+  "branch": null,
+  "base_branch": "feat/ai-recommend-experience",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "06-24-poi-id-stable",
+    "06-24-scoring-module",
+    "06-24-scene-system",
+    "06-24-recommend-module",
+    "06-24-ai-recommend"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
