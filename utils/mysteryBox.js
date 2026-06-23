@@ -2,7 +2,7 @@
 // 基于 E&E（探索与利用）最佳实践：Epsilon-Greedy + 长尾加权 + 会话去重
 // 详见 .trellis/tasks/06-14-mystery-box-feature/design.md §3
 
-const { SCENE_KEYWORDS } = require('../config/sceneKeywords.js');
+const { matchesScene, getScene, SCENE_NAMES } = require('../config/scenes.js');
 const { normalizePoiType, makePoiId } = require('./util.js');
 const { distanceScore, qualityScore } = require('./scoring.js');
 
@@ -30,11 +30,10 @@ function longTailBonus(poi) {
 // 导致近距好店因品类词未命中（如"面馆"未命中午餐"面食"）被远处匹配店反超。
 // 弱化惩罚后软引导仍生效，但未命中好店不再被严重压制。
 function timeAwareMultiplier(poi, currentScene) {
-  const keywords = SCENE_KEYWORDS[currentScene];
-  if (!keywords) return 1.0; // 随便吃点 / 未知场景不加权
-  const haystack = (poi.name || '') + (poi.type || '') + (poi.typecode || '');
-  const isMatch = keywords.some((k) => haystack.indexOf(k) >= 0);
-  return isMatch ? 1.2 : 0.85;
+  // 系数（1.2/0.85）不变；匹配算法统一走 config/scenes.js 的 matchesScene（canonical+alias）。
+  // 随便吃点 / 未知场景（空 match）matchesScene 恒 true → 不施加软引导。
+  if (matchesScene(currentScene, poi)) return 1.2;
+  return 0.85;
 }
 
 // ===== 质量门槛 =====
@@ -137,14 +136,13 @@ function midBandPick(weighted) {
 
 // ===== 场景识别辅助 =====
 
-// 检测某 POI 所属的用餐场景（基于关键词）
+// 检测某 POI 所属的用餐场景（基于 canonical+alias）
 function detectPoiScene(poi) {
-  const haystack = (poi.name || '') + (poi.type || '') + (poi.typecode || '');
-  for (const scene of Object.keys(SCENE_KEYWORDS)) {
-    const keywords = SCENE_KEYWORDS[scene];
-    if (!keywords) continue;
-    if (keywords.some((k) => haystack.indexOf(k) >= 0)) {
-      return scene;
+  for (const sceneName of SCENE_NAMES) {
+    const scene = getScene(sceneName);
+    if (!scene || !scene.match || Object.keys(scene.match).length === 0) continue; // 跳过 随便吃点（空 match 恒 true）
+    if (matchesScene(sceneName, poi)) {
+      return sceneName;
     }
   }
   return ''; // 无法识别
@@ -152,18 +150,16 @@ function detectPoiScene(poi) {
 
 // 判断 POI 场景与当前时段是否严重不匹配
 // 只在"明确属于某场景"且"与当前时段明显冲突"时返回 true
+// 冲突规则统一来自 config/scenes.js 的 scene.conflicts（已补全 6 场景）。
 function isSceneMismatch(poiScene, currentScene) {
   if (!poiScene || !currentScene) return false;
   if (poiScene === currentScene) return false;
-
-  // 定义严重冲突的场景对（时段完全相反）
-  const conflicts = {
-    '早餐': ['夜宵'],
-    '夜宵': ['早餐'],
-    '下午茶/饮品': ['早餐', '夜宵']
-  };
-  const conflictList = conflicts[currentScene] || [];
-  return conflictList.indexOf(poiScene) >= 0;
+  // 冲突是对称的：任一方声明与另一方冲突即视为严重不匹配（早餐↔夜宵、下午茶↔早餐/夜宵）。
+  const cur = getScene(currentScene);
+  const poi = getScene(poiScene);
+  const curConflicts = (cur && cur.conflicts) || [];
+  const poiConflicts = (poi && poi.conflicts) || [];
+  return curConflicts.indexOf(poiScene) >= 0 || poiConflicts.indexOf(currentScene) >= 0;
 }
 
 // ===== 推荐理由生成（模板化，不调用 AI）=====

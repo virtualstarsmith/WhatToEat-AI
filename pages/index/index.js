@@ -2,25 +2,17 @@
 // 位置与 POI 数据通过 locationHelper + app.globalData 与 mystery 页面共享
 // 盲盒逻辑已迁移至 pages/mystery/
 
-const { SCENE_KEYWORDS, SCENES } = require('../../config/sceneKeywords.js');
+const { SCENES, getScene, matchesScene } = require('../../config/scenes.js');
 const locHelper = require('../../utils/locationHelper.js');
 const commercialHelper = require('../../utils/commercialHelper.js');
 const { normalizePoiType } = require('../../utils/util.js');
 const { scoreCandidates: scoreCandidatesBase } = require('../../utils/scoring.js');
 
-const SCENE_TONE_MAP = {
-  '随便吃点': 'tone-warm',
-  '早餐': 'tone-value',
-  '午餐': 'tone-spicy',
-  '晚餐': 'tone-spicy',
-  '夜宵': 'tone-late',
-  '下午茶/饮品': 'tone-fresh'
-};
-
-const SCENE_OPTIONS = SCENES.map((name) => ({
-  name,
-  label: sceneLabel(name),
-  tone: SCENE_TONE_MAP[name] || 'tone-warm'
+// 场景语气色（toneClass）现收敛到 config/scenes.js 单一事实源，不再在本页维护 SCENE_TONE_MAP。
+const SCENE_OPTIONS = SCENES.map((scene) => ({
+  name: scene.name,
+  label: sceneLabel(scene.name),
+  tone: scene.toneClass
 }));
 
 // 评分相关函数
@@ -30,10 +22,9 @@ const SCENE_OPTIONS = SCENES.map((name) => ({
 // 两套权重是有意区分的——首页求稳、盲盒求惊喜，并非遗漏。
 
 function sceneMultiplier(scene, poi) {
-  const keywords = SCENE_KEYWORDS[scene];
-  if (!keywords) return 1.0;
-  const haystack = (poi.name || '') + (poi.type || '') + (poi.typecode || '');
-  return keywords.some((k) => haystack.indexOf(k) >= 0) ? 1.0 : 0.5;
+  // 系数（命中 1.0 / 未命中 0.5）不变；匹配算法统一走 config/scenes.js 的 matchesScene（canonical+alias）。
+  // 随便吃点 / 未知场景（空 match）matchesScene 恒 true → 返回 1.0，不施加场景乘数。
+  return matchesScene(scene, poi) ? 1.0 : 0.5;
 }
 
 // 首页候选打分：复用 utils/scoring.js 的 scoreCandidates，传入首页专属权重 profile 与场景乘数。
@@ -561,15 +552,8 @@ Page({
     const type = normalizePoiType(poi.type);
 
     // 场景语气：让 fallback 文案和 AI 一样"识相"，而非机械复述评分距离。
-    // 用场景短句点出"此刻最该吃这个"的感觉，再按店况选一句补足。
-    const sceneTone = {
-      '早餐': '早饭得趁热',
-      '午餐': '中午对付一口',
-      '下午茶/饮品': '歇会儿',
-      '晚餐': '正儿八经吃顿',
-      '夜宵': '夜深解个馋',
-      '随便吃点': '随便垫垫'
-    }[scene] || '就这家吧';
+    // 短句现取自 config/scenes.js 的 scene.reasonTone（单一事实源），未知场景兜底 '就这家吧'。
+    const sceneTone = (getScene(scene) && getScene(scene).reasonTone) || '就这家吧';
 
     // 近 + 高分：双重优势，强调"省心"
     if (rating && rating >= 4.5 && distance < 500) {
