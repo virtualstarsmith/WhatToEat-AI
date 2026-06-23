@@ -48,24 +48,13 @@
           <!-- 揭晓结果 -->
           <view class="box-revealed-wrap" wx:else>
             <view class="reveal-badge">🎉 恭喜开出</view>
-            <view class="card mystery-card {{mysteryBox.currentResult.isMismatch ? 'card-mismatch' : ''}}">
-              <view class="card-header">
-                <text class="card-name">{{mysteryBox.currentResult.name}}</text>
-                <text class="card-type">{{mysteryBox.currentResult.type}}</text>
-              </view>
-              <view class="card-meta">
-                <text class="meta-item">📍 {{mysteryBox.currentResult.distanceText}}</text>
-                <text class="meta-item">⭐ {{mysteryBox.currentResult.ratingText}}</text>
-                <text class="meta-item" wx:if="{{mysteryBox.currentResult.costText}}">💰 {{mysteryBox.currentResult.costText}}</text>
-              </view>
-              <view class="card-reason" wx:if="{{mysteryBox.currentResult.reason}}">
-                {{mysteryBox.currentResult.reason}}
-              </view>
-              <view class="card-actions">
-                <view class="action-btn primary" bindtap="onMysteryNav">导航</view>
-                <view class="action-btn" bindtap="onMysteryCopyAddr">复制地址</view>
-              </view>
-            </view>
+            <restaurant-card
+              card="{{mysteryBox.currentResult}}"
+              variant="mystery"
+              isMismatch="{{mysteryBox.currentResult.isMismatch}}"
+              bind:navigate="onMysteryNav"
+              bind:copyaddr="onMysteryCopyAddr"
+            />
           </view>
         </view>
 

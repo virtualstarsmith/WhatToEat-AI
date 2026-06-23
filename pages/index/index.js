@@ -7,6 +7,7 @@ const locHelper = require('../../utils/locationHelper.js');
 const commercialHelper = require('../../utils/commercialHelper.js');
 const { normalizePoiType } = require('../../utils/util.js');
 const { scoreCandidates: scoreCandidatesBase } = require('../../utils/scoring.js');
+const { detectScene, formatDistance, formatRating, pad2 } = require('../../utils/recommend.js');
 
 const SCENE_TONE_MAP = {
   '随便吃点': 'tone-warm',
@@ -75,20 +76,11 @@ function topNWithExplore(scored, n, exploreSlots) {
   return picked.sort((a, b) => b.score - a.score);
 }
 
-// 按时段自动检测场景
-function detectScene() {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 10) return '早餐';
-  if (hour >= 10 && hour < 14) return '午餐';
-  if (hour >= 14 && hour < 17) return '下午茶/饮品';
-  if (hour >= 17 && hour < 21) return '晚餐';
-  return '夜宵';
-}
+// detectScene 已抽到 utils/recommend.js 共享（见 06-24-recommend-module）。
 
-// 补零：用于喂给 AI 的时间文本（"08:30" 而非 "8:30"）
-function padHour(h) {
-  return h < 10 ? '0' + h : '' + h;
-}
+// padHour 用 recommend.pad2 别名：callAIRecommend（任务⑤区域）仍用 padHour 名调用，
+// 此别名使其无需改动即编译通过，避免触碰 ⑤ 的函数体。
+const padHour = pad2;
 function padMinute(m) {
   return m < 10 ? '0' + m : '' + m;
 }
@@ -97,14 +89,8 @@ function sceneLabel(scene) {
   return scene === '下午茶/饮品' ? '下午茶' : scene;
 }
 
-function formatDistance(d) {
-  if (d == null) return '';
-  return d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m';
-}
+// formatDistance / formatRating 已抽到 utils/recommend.js 共享。
 
-function formatRating(r) {
-  return r ? r.toFixed(1) : '无评分';
-}
 
 function buildCardView(rec) {
   const poi = rec.poi || {};
@@ -593,10 +579,11 @@ Page({
   // ===== 卡片操作 =====
 
   onOpenNav(e) {
-    const idx = e.currentTarget.dataset.idx;
-    const card = this.data.cardsView[idx];
-    if (!card || !card.location) return;
-    const [lng, lat] = card.location.split(',').map(Number);
+    // restaurant-card 组件 triggerEvent('navigate', { location })
+    const location = e.detail.location;
+    const card = (this.data.cardsView || []).find((c) => c.location === location) || {};
+    if (!location) return;
+    const [lng, lat] = location.split(',').map(Number);
     if (isNaN(lng) || isNaN(lat)) return;
     wx.openLocation({
       longitude: lng,
@@ -608,27 +595,28 @@ Page({
   },
 
   onCopyAddr(e) {
-    const idx = e.currentTarget.dataset.idx;
-    const card = this.data.cardsView[idx];
-    if (!card) return;
+    // restaurant-card 组件 triggerEvent('copyaddr', { address })
+    const card = (this.data.cardsView || []).find((c) => c.address === e.detail.address) || {};
+    const address = e.detail.address;
+    if (!address) return;
     wx.setClipboardData({
-      data: card.address || card.name,
+      data: address || card.name,
       success: () => wx.showToast({ title: '地址已复制', icon: 'success' })
     });
   },
 
   onOpenCommercial(e) {
-    const idx = e.currentTarget.dataset.idx;
-    const card = this.data.cardsView[idx];
-    if (!card || !card.shopEntry) return;
+    // restaurant-card 组件 triggerEvent('coupon', { poi_id, name })
+    const name = e.detail.name;
+    if (!name) return;
     // 按商家名重新查 entry（避免把配置对象塞进卡片 data）
-    const entry = commercialHelper.lookupShopEntry(card.name);
+    const entry = commercialHelper.lookupShopEntry(name);
     commercialHelper.openEntry(entry);
   },
 
-  // 平台级「领红包」入口点击
+  // 平台级「领红包」入口点击（coupon-float 组件 triggerEvent('open', { key })）
   onOpenPlatform(e) {
-    const key = e.currentTarget.dataset.key;
+    const key = e.detail.key;
     const platform = (this.data.platformButtons || []).find((p) => p.key === key);
     commercialHelper.openEntry(platform);
     // 从弹窗选择时，跳转后自动关闭弹窗
@@ -637,7 +625,7 @@ Page({
     }
   },
 
-  // 红包选择弹窗显隐切换
+  // 红包选择弹窗显隐切换（coupon-float 组件 triggerEvent('toggle')）
   onToggleCouponPicker() {
     this.setData({ showCouponPicker: !this.data.showCouponPicker });
   }

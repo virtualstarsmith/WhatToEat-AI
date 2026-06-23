@@ -37,5 +37,9 @@
   "requiredPrivateInfos": [
     "getLocation",
     "chooseLocation"
-  ]
+  ],
+  "usingComponents": {
+    "restaurant-card": "/components/restaurant-card/index",
+    "coupon-float": "/components/coupon-float/index"
+  }
 }

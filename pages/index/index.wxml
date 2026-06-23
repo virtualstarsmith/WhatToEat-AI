@@ -56,35 +56,15 @@
 
     <!-- 推荐卡片（loading 时也保留显示，避免刷新时推荐消失） -->
     <view class="cards" wx:if="{{cardsView.length > 0}}">
-      <view
+      <restaurant-card
         wx:for="{{cardsView}}"
-        wx:for-index="idx"
         wx:key="poi_id"
-        class="card"
-      >
-        <view class="card-header">
-          <text class="card-name">{{item.name}}</text>
-          <text class="card-type">{{item.type}}</text>
-        </view>
-        <view class="card-meta">
-          <text class="meta-item">📍 {{item.distanceText}}</text>
-          <text class="meta-item">⭐ {{item.ratingText}}</text>
-          <text class="meta-item" wx:if="{{item.costText}}">💰 {{item.costText}}</text>
-        </view>
-        <view class="card-reason" wx:if="{{item.reason}}">
-          💡 {{item.reason}}
-        </view>
-        <view class="card-actions">
-          <view class="action-btn primary" data-idx="{{idx}}" bindtap="onOpenNav">导航</view>
-          <view class="action-btn" data-idx="{{idx}}" bindtap="onCopyAddr">复制地址</view>
-          <view
-            class="action-btn ghost"
-            wx:if="{{item.shopEntry}}"
-            data-idx="{{idx}}"
-            bindtap="onOpenCommercial"
-          >🎫</view>
-        </view>
-      </view>
+        card="{{item}}"
+        variant="index"
+        bind:navigate="onOpenNav"
+        bind:copyaddr="onCopyAddr"
+        bind:coupon="onOpenCommercial"
+      />
     </view>
 
     <!-- 换一批 -->
@@ -95,28 +75,11 @@
     </view>
   </scroll-view>
 
-  <!-- 悬浮红包按钮（平台级 CPS 入口，配置齐全时展示；常驻右下角） -->
-  <view
-    class="float-coupon"
-    wx:if="{{platformButtons.length > 0}}"
-    bindtap="onToggleCouponPicker"
-  >
-    <text class="float-coupon-icon">🧧</text>
-    <text class="float-coupon-badge" wx:if="{{platformButtons.length > 1}}">{{platformButtons.length}}</text>
-  </view>
-
-  <!-- 红包选择弹窗（底部 action-sheet） -->
-  <view class="coupon-mask {{showCouponPicker ? 'coupon-mask-show' : ''}}" bindtap="onToggleCouponPicker">
-    <view class="coupon-picker {{showCouponPicker ? 'coupon-picker-show' : ''}}" catchtap="">
-      <view class="coupon-picker-title">🎁 领外卖红包下单更省</view>
-      <view
-        wx:for="{{platformButtons}}"
-        wx:key="key"
-        class="coupon-picker-item"
-        data-key="{{item.key}}"
-        bindtap="onOpenPlatform"
-      >{{item.label}}</view>
-      <view class="coupon-picker-cancel" catchtap="onToggleCouponPicker">取消</view>
-    </view>
-  </view>
+  <!-- 悬浮红包入口（平台级 CPS，配置齐全时展示）+ 选择弹窗 -->
+  <coupon-float
+    platforms="{{platformButtons}}"
+    show="{{showCouponPicker}}"
+    bind:toggle="onToggleCouponPicker"
+    bind:open="onOpenPlatform"
+  />
 </view>
