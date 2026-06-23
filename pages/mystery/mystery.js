@@ -7,6 +7,7 @@ const locHelper = require('../../utils/locationHelper.js');
 const commercialHelper = require('../../utils/commercialHelper.js');
 const { normalizePoiType } = require('../../utils/util.js');
 const { detectScene, formatDistance, formatRating, pad2 } = require('../../utils/recommend.js');
+const { streamAiText } = require('../../utils/aiRecommend.js');
 
 function sceneLabel(scene) {
   return scene === '下午茶/饮品' ? '下午茶' : scene;
@@ -59,43 +60,10 @@ function buildMysteryPrompt(poi, scene) {
 async function callMysteryAIReason(poi, scene) {
   try {
     const messages = buildMysteryPrompt(poi, scene);
-    const model = wx.cloud.extend.AI.createModel('cloudbase');
-    const res = await model.streamText({
-      data: {
-        model: 'hy3-preview',
-        messages,
-        stream: true,
-        response_format: { type: 'json_object' }
-      }
-    });
-
-    let fullContent = '';
-    const collectChunk = (chunk) => {
-      if (chunk && typeof chunk === 'string') fullContent += chunk;
-    };
-
-    // 优先 textStream（纯文本增量，最稳）
-    if (res && res.textStream) {
-      try {
-        for await (const chunk of res.textStream) collectChunk(chunk);
-      } catch (e) { /* 回退 eventStream */ }
-    }
-    if (!fullContent && res && res.eventStream) {
-      for await (let event of res.eventStream) {
-        if (event == null) continue;
-        if (event.data === '[DONE]') break;
-        let data = event.data;
-        if (typeof data === 'string') {
-          if (data === '[DONE]' || !data.trim()) continue;
-          try { data = JSON.parse(data); } catch (e) { continue; }
-        }
-        if (data == null || typeof data !== 'object') continue;
-        const content = data?.choices?.[0]?.delta?.content ||
-                        data?.choices?.[0]?.message?.content ||
-                        data?.content;
-        collectChunk(content);
-      }
-    }
+    // 流式收集复用 utils/aiRecommend.streamAiText（与首页同源，消除双份复制）。
+    // reason 提取保留盲盒自己的逻辑（取 reason 字段，与首页取 recommendations[] 不同，
+    // 故不套 parseRecommendJson）。见 06-24-ai-recommend。
+    const fullContent = await streamAiText(messages, {});
 
     if (!fullContent || !fullContent.trim()) return null;
 
