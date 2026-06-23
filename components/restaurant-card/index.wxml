@@ -1,0 +1,23 @@
+<view class="card {{variant === 'mystery' ? 'mystery-card' : ''}} {{isMismatch ? 'card-mismatch' : ''}}">
+  <view class="card-header">
+    <text class="card-name">{{card.name}}</text>
+    <text class="card-type">{{card.type}}</text>
+  </view>
+  <view class="card-meta">
+    <text class="meta-item">📍 {{card.distanceText}}</text>
+    <text class="meta-item">⭐ {{card.ratingText}}</text>
+    <text class="meta-item" wx:if="{{card.costText}}">💰 {{card.costText}}</text>
+  </view>
+  <view class="card-reason" wx:if="{{card.reason}}">
+    <block wx:if="{{variant === 'index'}}">💡 </block>{{card.reason}}
+  </view>
+  <view class="card-actions">
+    <view class="action-btn primary" bindtap="onNavigate">导航</view>
+    <view class="action-btn" bindtap="onCopyAddr">复制地址</view>
+    <view
+      class="action-btn ghost"
+      wx:if="{{variant === 'index' && card.shopEntry}}"
+      bindtap="onCoupon"
+    >🎫</view>
+  </view>
+</view>

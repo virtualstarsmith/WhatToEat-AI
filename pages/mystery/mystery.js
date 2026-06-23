@@ -5,36 +5,15 @@
 const mb = require('../../utils/mysteryBox.js');
 const locHelper = require('../../utils/locationHelper.js');
 const commercialHelper = require('../../utils/commercialHelper.js');
-const { SCENE_NAMES } = require('../../config/scenes.js');
 const { normalizePoiType } = require('../../utils/util.js');
-
-// 按时段自动检测场景（与 index.js 保持一致）
-function detectScene() {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 10) return '早餐';
-  if (hour >= 10 && hour < 14) return '午餐';
-  if (hour >= 14 && hour < 17) return '下午茶/饮品';
-  if (hour >= 17 && hour < 21) return '晚餐';
-  return '夜宵';
-}
+const { detectScene, formatDistance, formatRating, pad2 } = require('../../utils/recommend.js');
 
 function sceneLabel(scene) {
   return scene === '下午茶/饮品' ? '下午茶' : scene;
 }
 
-function formatDistance(d) {
-  if (d == null) return '';
-  return d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m';
-}
-
-function formatRating(r) {
-  return r ? r.toFixed(1) : '无评分';
-}
-
-// 时间补零：喂给 AI 的时间文本，让它"识相"
-function pad2(n) {
-  return n < 10 ? '0' + n : '' + n;
-}
+// detectScene / formatDistance / formatRating / pad2 已抽到 utils/recommend.js 共享
+// （见 06-24-recommend-module）。buildMysteryPrompt 内的 pad2 调用自动解析到共享版。
 
 // 为盲盒揭晓构造 AI prompt。
 // 盲盒的卖点不是"最优"，而是"惊喜"——所以 system prompt 引导模型
@@ -157,7 +136,7 @@ Page({
       cooldownTime: 2000,
       poolExhausted: false
     },
-    // CPS 红包入口（与 index 页共享逻辑）
+    // CPS 红包入口（与 index 页共享逻辑，用 coupon-float 组件渲染）
     platformButtons: [],
     showCouponPicker: false
   },
@@ -366,9 +345,9 @@ Page({
     });
   },
 
-  // 平台级「领红包」入口点击（与 index 页逻辑一致）
+  // 平台级「领红包」入口点击（coupon-float 组件 triggerEvent('open', { key })）
   onOpenPlatform(e) {
-    const key = e.currentTarget.dataset.key;
+    const key = e.detail.key;
     const platform = (this.data.platformButtons || []).find((p) => p.key === key);
     commercialHelper.openEntry(platform);
     if (this.data.showCouponPicker) {
@@ -376,7 +355,7 @@ Page({
     }
   },
 
-  // 红包选择弹窗显隐切换
+  // 红包选择弹窗显隐切换（coupon-float 组件 triggerEvent('toggle')）
   onToggleCouponPicker() {
     this.setData({ showCouponPicker: !this.data.showCouponPicker });
   }
