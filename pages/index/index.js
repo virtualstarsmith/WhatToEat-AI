@@ -5,7 +5,8 @@
 const { SCENE_KEYWORDS, SCENES } = require('../../config/sceneKeywords.js');
 const locHelper = require('../../utils/locationHelper.js');
 const commercialHelper = require('../../utils/commercialHelper.js');
-const { normalizePoiType, makePoiId } = require('../../utils/util.js');
+const { normalizePoiType } = require('../../utils/util.js');
+const { scoreCandidates: scoreCandidatesBase } = require('../../utils/scoring.js');
 
 const SCENE_TONE_MAP = {
   '随便吃点': 'tone-warm',
@@ -23,16 +24,10 @@ const SCENE_OPTIONS = SCENES.map((name) => ({
 }));
 
 // 评分相关函数
+// distanceScore / qualityScore 已抽到 utils/scoring.js 共享（首页与盲盒同源，见 06-24-scoring-module）。
 // 首页评分公式：0.5×距离 + 0.5×质量（求稳，贴近用户当下需求）。
 // 注意：盲盒页 utils/mysteryBox.js 用 0.4/0.4/0.2（含长尾惊喜项），
 // 两套权重是有意区分的——首页求稳、盲盒求惊喜，并非遗漏。
-function distanceScore(distance) {
-  return Math.exp(-distance / 800);
-}
-
-function qualityScore(rating) {
-  return rating ? rating / 5.0 : 0.3;
-}
 
 function sceneMultiplier(scene, poi) {
   const keywords = SCENE_KEYWORDS[scene];
@@ -41,21 +36,14 @@ function sceneMultiplier(scene, poi) {
   return keywords.some((k) => haystack.indexOf(k) >= 0) ? 1.0 : 0.5;
 }
 
+// 首页候选打分：复用 utils/scoring.js 的 scoreCandidates，传入首页专属权重 profile 与场景乘数。
+// matcher 用 (poi) => sceneMultiplier(scene, poi) 把场景绑定进去。
+// poi_id 用稳定唯一标识（见 06-24-poi-id-stable）；matched 由 scoreCandidatesBase 按 matcher 命中计算。
 function scoreCandidates(pois, scene, excludeIds) {
-  // poi_id 用稳定唯一标识（高德 id 优先 / location|name 兜底），见 06-24-poi-id-stable。
-  // 严禁用数组下标——池子顺序变化（刷新/翻页）会导致去重失效/误删。
-  const excludeSet = new Set((excludeIds || []).map((id) => String(id)));
-  const keywords = SCENE_KEYWORDS[scene];
-  return pois.map((poi) => {
-    const base = 0.5 * distanceScore(poi.distance) + 0.5 * qualityScore(poi.rating);
-    const mult = sceneMultiplier(scene, poi);
-    let score = base * mult;
-    const poiId = makePoiId(poi);
-    if (excludeSet.has(poiId)) score *= 0.6;
-    // 标记是否命中当前场景关键词，供 topNWithExplore 划分匹配档/探索档
-    const matched = !keywords || mult > 1.0 ||
-      keywords.some((k) => ((poi.name || '') + (poi.type || '') + (poi.typecode || '')).indexOf(k) >= 0);
-    return { poi_id: poiId, poi, score, matched };
+  return scoreCandidatesBase(pois, {
+    weights: { d: 0.5, q: 0.5 },
+    matcher: (poi) => sceneMultiplier(scene, poi),
+    excludeIds
   });
 }
 

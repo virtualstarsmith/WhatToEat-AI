@@ -4,18 +4,9 @@
 
 const { SCENE_KEYWORDS } = require('../config/sceneKeywords.js');
 const { normalizePoiType, makePoiId } = require('./util.js');
+const { distanceScore, qualityScore } = require('./scoring.js');
 
-// ===== 评分相关（复用 index.js 既有公式）=====
-
-// 距离评分：指数衰减，800m 约步行 10 分钟
-function distanceScore(distance) {
-  return Math.exp(-distance / 800);
-}
-
-// 质量评分：无评分给 0.3（降权而非中位数）
-function qualityScore(rating) {
-  return rating ? rating / 5.0 : 0.3;
-}
+// ===== 评分原语（自 utils/scoring.js 引入，与首页同源，见 06-24-scoring-module）=====
 
 // ===== 盲盒专属加权 =====
 

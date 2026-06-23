@@ -67,6 +67,26 @@ This was originally codified in `.trellis/tasks/06-14-mystery-box-feature/design
 
 ---
 
+## Scoring Primitives — Single Source, Parameterize the Weights
+
+The distance/quality scoring primitives live in **one** place: `utils/scoring.js`. It exports:
+
+- `distanceScore(distance)` — `Math.exp(-distance/800)`, exponential decay (~800m ≈ 10 min walk).
+- `qualityScore(rating)` — `rating ? rating/5.0 : 0.3` (no rating ⇒ downgrade, not median).
+- `scoreCandidates(pois, { weights, bonus, matcher, excludeIds })` — parameterized aggregation that returns `[{ poi_id, poi, score, matched }]`, with `poi_id` from `makePoiId`.
+
+The two pages (index = "reliable", mystery = "surprise") share these **primitives** but pass **different weight profiles** — index `{d:0.5,q:0.5}`, mystery `{d:0.4,q:0.4,longtail:0.2}`. This is the split between *spec* (the formula) and *parameter* (the weights); do not collapse them back into per-page copies.
+
+**Rules:**
+
+- Do not redefine `distanceScore`/`qualityScore` in a page or another module. Import from `utils/scoring.js`. (`utils/mysteryBox.js` re-exports them only to preserve its existing export contract — they resolve to the same function.)
+- Page-specific multipliers (`sceneMultiplier` in index, `timeAwareMultiplier` + `longTailBonus` in mystery) and selection logic (`topN`/`topNWithExplore` in index, `weightedRandomPick` in mystery) stay in their own files. `scoreCandidates` accepts them as `matcher`/`bonus` callbacks rather than hard-coding them — keep it that way; do not over-merge multiplier semantics into the shared module.
+- When a new scoring consumer is added, inject its weights/multipliers as callbacks. Do not copy the formula.
+
+Codified by `06-24-scoring-module` after `distanceScore`/`qualityScore` were found duplicated verbatim across `index.js` and `mysteryBox.js` (plus a deleted cloud function), with only the *weights* actually differing — a classic drift hazard.
+
+---
+
 ## Common Mistakes
 
 Do not mutate `this.data` directly. Use `this.setData()` for values rendered by WXML so the view updates consistently.
