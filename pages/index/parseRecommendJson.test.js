@@ -4,50 +4,13 @@
 // 这是为了复现并验证 "Unexpected number in JSON at position 71" 修复的回归测试。
 // 根因：AI 返回的内容可能带 markdown 围栏、自然语言开场白或流式协议残留，
 // 直接 JSON.parse 会失败。parseRecommendJson 提供多级兜底提取。
+//
+// 直接 require 生产模块 utils/aiRecommend.js（与实现同源）：
+// 旧版因 index.js 是 Page({...}) 注册、函数无法被 require，曾整份抄写实现，
+// 易与实现分叉；现 parseRecommendJson 已迁出为纯函数模块，测试与生产同源。
+// 见 06-24-ai-recommend。
 
-// 从 index.js 抽取被测函数（避免引入 wx/cloud 等小程序运行时依赖）：
-// 这里直接复制 parseRecommendJson 的实现，确保与生产代码一致。
-function parseRecommendJson(raw) {
-  const cleaned = (raw || '').replace(/[\u200b-\u200d\ufeff]/g, '').trim();
-
-  try { return JSON.parse(cleaned); } catch (e) { /* continue */ }
-
-  const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenceMatch) {
-    try { return JSON.parse(fenceMatch[1].trim()); } catch (e) { /* continue */ }
-  }
-
-  const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-  if (start >= 0 && end > start) {
-    try { return JSON.parse(cleaned.slice(start, end + 1)); } catch (e) { /* continue */ }
-  }
-
-  const recs = tolerantParseRecommendations(cleaned);
-  if (recs.length > 0) {
-    return { recommendations: recs };
-  }
-
-  throw new Error('AI response is not valid JSON');
-}
-
-// 按字段名从（可能损坏的）AI 文本中容错提取推荐项。
-function tolerantParseRecommendations(text) {
-  if (!text) return [];
-  const recs = [];
-  const tokenRe = /"?poi_id"?\s*:?\s*"?([^",:}\s\\]+)"?|"?reason"?\s*:?\s*"((?:[^"\\]|\\.)*)"/gi;
-  let pendingId = null;
-  let m;
-  while ((m = tokenRe.exec(text)) !== null) {
-    if (m[1] !== undefined) {
-      pendingId = m[1];
-    } else if (m[2] !== undefined && pendingId !== null) {
-      recs.push({ poi_id: pendingId, reason: m[2] });
-      pendingId = null;
-    }
-  }
-  return recs;
-}
+const { parseRecommendJson } = require('../../utils/aiRecommend.js');
 
 let passed = 0;
 let failed = 0;
