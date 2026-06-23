@@ -128,9 +128,18 @@ async function streamAiText(messages, opts) {
       }
       if (data == null || typeof data !== 'object') continue;
 
-      const content = data?.choices?.[0]?.delta?.content ||
-                     data?.choices?.[0]?.message?.content ||
-                     data?.content;
+      // content 三级取值（delta / message / 裸 content）。
+      // 不用可选链 ?.：项目未安装 @babel/runtime，?. 会被转译成 arrayWithoutHoles
+      // 等 helper 导致运行时报错。用传统守卫式访问，与 mysteryBox 风格一致。
+      var choices = (data && data.choices && data.choices[0]) || null;
+      var content;
+      if (choices) {
+        content = (choices.delta && choices.delta.content) ||
+                  (choices.message && choices.message.content) ||
+                  data.content;
+      } else {
+        content = data.content;
+      }
       collectChunk(content);
     }
   }
