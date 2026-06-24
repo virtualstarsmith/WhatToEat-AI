@@ -1,0 +1,105 @@
+# =============================================================================
+# CNB 配置 — 微信开发者工具环境
+#
+# 包含两部分：
+#   1) 云原生构建流水线：把 .ide/Dockerfile 构建成镜像并推送到 CNB 制品库
+#   2) 云原生开发环境：启动时直接拉取制品库镜像，后台拉起微信开发者工具 + noVNC
+#
+# 文档:
+#   配置文件语法   https://docs.cnb.cool/zh/build/configuration.html
+#   语法手册       https://docs.cnb.cool/zh/build/grammar.html
+#   构建环境变量   https://docs.cnb.cool/zh/build/build-in-env.html
+#   自定义开发环境 https://docs.cnb.cool/zh/workspaces/custom-dev-env.html
+#   业务端口预览   https://docs.cnb.cool/zh/workspaces/business-preview.html
+#
+# 镜像地址说明：
+#   services:[docker] 会自动 docker login 到 ${CNB_DOCKER_REGISTRY}，
+#   推送地址为 ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:<tag>
+#   实际形如  docker.cnb.cool/virtualstarsmith/whateat-ai:latest
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# 一、云原生构建流水线：构建并推送开发环境镜像
+# ---------------------------------------------------------------------------
+
+# 1) 推送到 main 分支时：构建镜像，打 latest + commit 短 SHA 两个标签
+main:
+  push:
+    - name: build-wxdev-image
+      # 开启 dind（docker-in-docker），会自动登录 CNB 制品库
+      services:
+        - docker
+      docker:
+        image: docker:27-dind
+      stages:
+        - name: 构建并推送镜像 (latest + commit)
+          script: |
+            set -e
+            IMAGE="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+            echo "构建镜像 -> ${IMAGE}"
+            # latest：开发环境默认引用的标签
+            docker build -f .ide/Dockerfile -t "${IMAGE}:latest" .
+            docker push "${IMAGE}:latest"
+            # commit 短 SHA：便于回溯某次构建
+            docker tag "${IMAGE}:latest" "${IMAGE}:${CNB_COMMIT_SHORT}"
+            docker push "${IMAGE}:${CNB_COMMIT_SHORT}"
+            echo "推送完成："
+            echo "  ${IMAGE}:latest"
+            echo "  ${IMAGE}:${CNB_COMMIT_SHORT}"
+
+# 2) $ 通配：tag_push 构建版本镜像；vscode 启动开发环境
+#    （两者同属 $ 块，互不影响：tag_push 由打 Tag 触发，vscode 由打开云原生开发触发）
+$:
+  # 打 Tag 时（如 v1.0.0）：构建正式版本镜像，用 Tag 名作标签
+  tag_push:
+    - name: build-wxdev-image-tag
+      services:
+        - docker
+      docker:
+        image: docker:27-dind
+      stages:
+        - name: 构建并推送版本镜像
+          script: |
+            set -e
+            IMAGE="${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}"
+            # tag_push 事件下 CNB_BRANCH 即为 Tag 名（如 v1.0.0）
+            TAG="${CNB_BRANCH}"
+            echo "构建版本镜像 -> ${IMAGE}:${TAG}"
+            docker build -f .ide/Dockerfile -t "${IMAGE}:${TAG}" .
+            docker push "${IMAGE}:${TAG}"
+            # 同时刷新 latest，使开发环境可选用最新发布版
+            docker tag "${IMAGE}:${TAG}" "${IMAGE}:latest"
+            docker push "${IMAGE}:latest"
+            echo "推送完成：${IMAGE}:${TAG} 与 ${IMAGE}:latest"
+
+  # ---------------------------------------------------------------------------
+  # 二、云原生开发环境：拉取制品库镜像，启动微信开发者工具 + noVNC
+  # ---------------------------------------------------------------------------
+  vscode:
+    - docker:
+        # 直接引用制品库镜像（由上面的构建流水线产出），启动快
+        # ${CNB_REPO_SLUG_LOWERCASE} 在开发环境同样可用；
+        # 若镜像为私有，CNB 会自动注入只读令牌拉取。
+        image: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+        # 首次尚未构建镜像时，可临时改回下方 build 行以就地构建：
+        # build: .ide/Dockerfile
+      services:
+        - vscode
+        - docker
+      # 开发环境启动后自动执行的任务
+      stages:
+        - name: 启动微信开发者工具与 noVNC 远程桌面
+          # 后台拉起桌面栈；--bg 让脚本立即返回，不阻塞环境就绪
+          script: |
+            nohup start-wxdev.sh --bg > /tmp/wxdev-start.log 2>&1 &
+            sleep 3
+            echo "========================================"
+            echo " 微信开发者工具 + noVNC 正在后台启动"
+            echo " 容器内地址: http://localhost:6080/vnc.html"
+            echo " VNC 密码: 123456"
+            echo " 下一步: 在 WebIDE 底部 PORTS 面板映射 6080 端口，"
+            echo "        得到公网 URL 后浏览器打开 <公网URL>/vnc.html"
+            echo " 日志: /tmp/wxdev-*.log"
+            echo "========================================"
+        - name: 准备就绪
+          script: echo "环境就绪，开始开发吧。"
