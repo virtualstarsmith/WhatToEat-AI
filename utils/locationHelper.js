@@ -66,6 +66,42 @@ function chooseLocationAndGetPois() {
   });
 }
 
+// 静默自动定位：getLocation 取经纬度 → 复用 fetchPois 拉商家，写入 globalData。
+// 地址用云函数 regeo 逆地理结果拼成「当前位置 · xxx」，与手动选点展示一致；
+// regeo 失败（无地址）时回退显示「附近」。供首页 onLoad 首次进入自动定位；
+// 失败由调用方回退到 chooseLocation 手动选点。
+function locateAndGetPois() {
+  const app = getApp();
+  return new Promise((resolve, reject) => {
+    wx.getLocation({
+      type: 'gcj02',
+      success: (res) => {
+        const coord = {
+          latitude: res.latitude,
+          longitude: res.longitude
+        };
+        // 写入全局共享（与 chooseLocationAndGetPois 字段对齐）
+        app.globalData.coord = coord;
+        app.globalData.locationOk = true;
+        app.globalData.locationError = '';
+
+        fetchPois(coord)
+          .then((pois) => {
+            // fetchPois 已把 regeo 地址写入 poisAddress；用它拼具体地址，与手动选点一致。
+            const regeo = app.globalData.poisAddress || '';
+            app.globalData.address = regeo ? `当前位置 · ${regeo}` : '附近';
+            resolve(pois);
+          })
+          .catch((err) => reject(err));
+      },
+      fail: (err) => {
+        console.warn('getLocation fail:', err);
+        reject(new Error('getLocation failed'));
+      }
+    });
+  });
+}
+
 // 调用 getPoi 云函数，结果写入 globalData
 function fetchPois(coord) {
   const app = getApp();
@@ -99,6 +135,8 @@ function fetchPois(coord) {
       app.globalData.pois = result.pois;
       app.globalData.poisLoadedAt = Date.now();
       app.globalData.poisCoord = coord;
+      // 逆地理地址（云函数 regeo 结果，自动定位用于显示；手动选点有自己的 address 不依赖它）
+      app.globalData.poisAddress = result.address || '';
       return result.pois;
     });
 }
@@ -126,6 +164,7 @@ module.exports = {
   poisUpdatedSince,
   markPoisConsumed,
   chooseLocationAndGetPois,
+  locateAndGetPois,
   fetchPois,
   refreshPois,
   invalidatePoisCache,

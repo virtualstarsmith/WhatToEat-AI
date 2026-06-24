@@ -103,9 +103,15 @@
 
 /* 揭晓结果 */
 .box-revealed-wrap {
+  /* 覆盖上方共享规则的 align-items:center：
+     揭晓区的 restaurant-card 需撑满容器宽度，否则在居中 flex 容器里
+     会随店铺名/AI 理由长短收缩，导致每次开盒卡片时宽时窄。 */
+  align-items: stretch;
   animation: mbFadeInUp 0.5s ease-out;
 }
 .reveal-badge {
+  /* 徽标保持居中（卡片已改为撑满宽度，徽标单独居中） */
+  align-self: center;
   background: linear-gradient(135deg, #F6C05A 0%, #F2A93B 100%);
   color: #2B2118;
   font-size: 24rpx;

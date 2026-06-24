@@ -47,6 +47,45 @@ function amapNearbyPage(longitude, latitude, radius, page) {
   });
 }
 
+// 调用高德逆地理编码（坐标 → 地址文本）。
+// 复用同一 AMAP_KEY，用于自动定位时把经纬度转成「当前位置 · xxx」的具体地址，
+// 使其与手动选点（chooseLocation 返回带 address）的展示一致。
+function amapRegeo(longitude, latitude) {
+  const path =
+    `/v3/geocode/regeo?location=${longitude},${latitude}` +
+    `&key=${AMAP_KEY}&extensions=base`;
+  const options = {
+    hostname: 'restapi.amap.com',
+    path,
+    method: 'GET',
+    timeout: 5000 // 仅用于显示，失败不应拖累整体 POI 拉取
+  };
+  return new Promise((resolve, reject) => {
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (json.status === '1' && json.regeocode) {
+            resolve(json.regeocode.formatted_address || '');
+          } else {
+            resolve('');
+          }
+        } catch (e) {
+          resolve(''); // 解析失败当作无地址，不抛错影响主流程
+        }
+      });
+    });
+    req.on('error', () => resolve(''));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(''); // 超时静默放弃，保证 POI 主流程不受影响
+    });
+    req.end();
+  });
+}
+
 // 标准化 POI（兼容 business / biz_ext 两种返回格式）
 function normalizePoi(poi) {
   const ext = poi.biz_ext || poi.business || {};
@@ -76,8 +115,11 @@ exports.main = async (event) => {
     return { status: 'error', message: 'AMAP_KEY env not set', pois: [] };
   }
   try {
-    // 第 1 页（主页）：其成败决定整体 status
-    const first = await amapNearbyPage(longitude, latitude, radius, 1);
+    // 首页 POI 与逆地理编码并行：regeo 仅用于地址显示，尽力而为、不阻断主流程。
+    const [first, regeoAddress] = await Promise.all([
+      amapNearbyPage(longitude, latitude, radius, 1),
+      amapRegeo(longitude, latitude)
+    ]);
     if (first.status !== '1') {
       return {
         status: 'error',
@@ -121,7 +163,7 @@ exports.main = async (event) => {
       .map(normalizePoi)
       .sort((a, b) => (a.distance || 0) - (b.distance || 0));
 
-    return { status: 'ok', pois };
+    return { status: 'ok', pois, address: regeoAddress || '' };
   } catch (e) {
     console.error('getPoi error:', e.message);
     return { status: 'error', message: e.message, pois: [] };

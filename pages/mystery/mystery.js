@@ -259,12 +259,17 @@ Page({
       isMismatch
     };
 
-    const history = [
-      { poi_id: result.poi_id, name: poi.name || '神秘店铺', card: cardView, openedAt: Date.now(), rank: this.data.mysteryBox.history.length + 1 },
-      ...this.data.mysteryBox.history
-    ].slice(0, 20);
+    // 不用数组展开 [...items]：微信开发者工具转译会外链 @babel/runtime 的 arrayWithoutHoles
+    // 等 helper（项目未装该 runtime），运行时报 module not defined。改用 concat 拼接，等价。
+    const history = [{
+      poi_id: result.poi_id,
+      name: poi.name || '神秘店铺',
+      card: cardView,
+      openedAt: Date.now(),
+      rank: this.data.mysteryBox.history.length + 1
+    }].concat(this.data.mysteryBox.history).slice(0, 20);
 
-    const openedIds = [...this.data.mysteryBox.openedIds, result.poi_id];
+    const openedIds = this.data.mysteryBox.openedIds.concat(result.poi_id);
 
     wx.vibrateShort({ type: 'light', fail: () => {} });
 

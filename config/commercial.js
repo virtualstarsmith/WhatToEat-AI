@@ -2,19 +2,25 @@
 //
 // 两类入口：
 //   platforms —— 平台级「领红包」入口（主返佣来源），每家平台一条
-//               点击跳官方小程序红包/落地页，携带你的推广位（sid/inviterid）
+//               点击跳聚推客「外卖美食团购」插件，携带 pub_id（你的聚推客推广位）
 //   entries   —— 按商家名关键词匹配的专属入口（兼容兜底），默认空
 //
 // type 决定点击行为（dispatch 在 utils/commercialHelper.js openEntry）：
-//   'miniprogram'  wx.navigateToMiniProgram(appId, path)   ← 推荐主路径
+//   'plugin'       wx.navigateTo('plugin://<provider>/<path>?pub_id=xxx')  ← 聚推客插件主路径
+//   'miniprogram'  wx.navigateToMiniProgram(appId, path)
 //   'webview'      MVP 暂回退复制（业务域名未配）；后续跳 pages/webview/index
 //   'copy' / 缺省   复制 url 到剪贴板
 //
-// ⚠️ 真实 appId / path 必须由你到各联盟后台实名注册后填入：
-//      美团：union.meituan.com（美团联盟，外卖佣金约 3%）
-//      饿了么：pub.alimama.com（阿里妈妈/淘宝联盟）
-//      京东外卖：union.jd.com（京东联盟，CPS 渠道待成熟）
-//    未填则对应入口不展示（getPlatformButtons 会过滤掉），无任何视觉影响。
+// ⚠️ 当前只接聚推客（聚合型微信小程序插件）：
+//      插件别名 meishi（plugin://meishi/...），provider wx5c787b48e6a02a51
+//      微信后台「插件管理」添加「外卖美食团购」后即可用；version 以后台详情页为准。
+//      pub_id 在聚推客联盟 jutuike.com 注册 → 推广位管理获取（归因/返佣来源，必填）。
+//
+//    聚推客插件 shop 页（外卖入口）必须带 type + sid=plugin，否则页面加载异常：
+//      type=meituan 美团外卖 ｜ type=ele 饿了么外卖
+//      sid=plugin 是固定值（表示"来自插件渠道"），不是推广位；归因靠 pub_id。
+//    pluginPath 内含 query（如 shop?type=meituan&sid=plugin）时，openEntry 会用 & 追加 pub_id。
+//    未填 pub_id 则跳转成功但无归因 = 无佣金；getPlatformButtons 过滤需 pluginProvider + pluginPath 齐全。
 
 module.exports = {
   // 平台级「领红包」入口（卡片区域展示，主返佣）
@@ -22,27 +28,20 @@ module.exports = {
     {
       key: 'meituan',
       label: '美团红包',
-      type: 'miniprogram',
-      appId: '',        // TODO: 美团外卖官方小程序 appId（美团联盟后台获取）
-      path: '',         // TODO: 带 SID 的红包页路径，如 pages/xxx?sid=你的SID
+      type: 'plugin',
+      pluginProvider: 'meishi', // 对应 app.json plugins 字段的别名 key（plugin://meishi/...）
+      pluginPath: 'shop?type=meituan&sid=plugin', // 聚推客插件 shop 页：美团外卖
+      pubId: '469210', // 聚推客联盟推广位 pub_id（归因/返佣来源）
       enabled: true
     },
     {
-      key: 'eleme',
+      key: 'ele',
       label: '饿了么红包',
-      type: 'miniprogram',
-      appId: '',        // TODO: 饿了么官方小程序 appId（淘宝联盟/阿里妈妈获取）
-      // 饿了么常用红包活动 ID：20150318020002192（以联盟后台实际为准）
-      path: '',         // TODO: pages/xxx?inviterid=你的inviterid&activityId=20150318020002192
+      type: 'plugin',
+      pluginProvider: 'meishi',
+      pluginPath: 'shop?type=ele&sid=plugin', // 聚推客插件 shop 页：饿了么外卖
+      pubId: '469210',
       enabled: true
-    },
-    {
-      key: 'jd',
-      label: '京东外卖',
-      type: 'miniprogram',
-      appId: '',        // TODO: 京东/京东外卖小程序 appId（京东联盟，CPS 渠道待开放）
-      path: '',
-      enabled: false    // 京东外卖 CPS 尚不成熟，默认关闭；渠道开放后置 true
     }
   ],
 

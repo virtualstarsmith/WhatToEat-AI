@@ -9,3 +9,8 @@ project.private.config.json
 *.local
 *.log
 .worktrees/
+
+# 构建产物 / 图片生成输出（不进 git，也不进小程序包，见 project.config.json packOptions.ignore）
+output/
+# Windows 误建文件（> nul 重定向在非 cmd 环境会落成实体文件）
+nul

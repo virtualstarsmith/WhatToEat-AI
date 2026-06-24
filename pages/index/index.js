@@ -40,22 +40,22 @@ function scoreCandidates(pois, scene, excludeIds) {
   });
 }
 
+// 不用数组展开 [...scored]：微信开发者工具会把它转译成 @babel/runtime 的
+// arrayWithoutHoles 等 helper（项目未装该 runtime），运行时报错 module not defined。
+// 改用 ES3 的 slice() 浅拷贝，行为等价且无需 helper。见 52aab18 同类修复。
 function topN(scored, n) {
-  return [...scored].sort((a, b) => b.score - a.score).slice(0, n);
+  return scored.slice().sort((a, b) => b.score - a.score).slice(0, n);
 }
 
 // 候选多样性选取：预留 exploreSlots 个「探索位」给非场景匹配的高分店铺，
 // 避免纯按场景加权分数排序导致 AI 候选全部同质化（如午餐全是面馆快餐）。
 // 场景匹配不足时自动用匹配档补齐，保证总能返回 n 个。
 function topNWithExplore(scored, n, exploreSlots) {
-  const sorted = [...scored].sort((a, b) => b.score - a.score);
+  const sorted = scored.slice().sort((a, b) => b.score - a.score);
   const matched = sorted.filter((s) => s.matched);
   const others = sorted.filter((s) => !s.matched);
   const mainCount = Math.max(n - exploreSlots, 0);
-  const picked = [
-    ...matched.slice(0, mainCount),
-    ...others.slice(0, exploreSlots)
-  ];
+  const picked = matched.slice(0, mainCount).concat(others.slice(0, exploreSlots));
   // 探索位不足或匹配档不足时，从剩余候选补齐到 n 个
   if (picked.length < n) {
     const pickedIds = new Set(picked.map((p) => p.poi_id));
@@ -132,14 +132,47 @@ Page({
     this.setData({ scene, sceneShort: sceneLabel(scene) });
   },
 
+  // 智能重定位：本会话未手动选过 → 按当前时间把场景拉回对应 tab。
+  // 跨时段（如中午进入、晚上切回）才会触发；手动选过的会话不被覆盖。
+  _maybeRelocateScene() {
+    if (this.sceneUserSelected) return;
+    const detected = detectScene();
+    if (this.data.scene === detected) return;
+    // 场景随时间变化 → 切换并作废旧推荐（后续 onShow 末尾逻辑会自动重推）
+    this._setScene(detected);
+    this.setData({
+      excludeIds: [],
+      recommendations: [],
+      cardsView: [],
+      source: '',
+      error: ''
+    });
+  },
+
   onLoad() {
+    this.sceneUserSelected = false; // 会话级：区分自动定位 / 手动选择
     this._setScene(detectScene());
     this._checkDailyReset();
     // 平台级推广入口（静态配置派生，算一次即可）
     this.setData({ platformButtons: commercialHelper.getPlatformButtons() });
+    // 首次进入自动定位：静默取当前位置 → 推荐；失败/拒绝则回退到手动选点。
+    // 成功路径与 requestLocation 一致（loading:true → callRecommend），
+    // 首次 onShow 的 !loading 守卫据此避免重复推荐。
+    this.setData({ loading: true, error: '', locationError: '' });
+    locHelper.locateAndGetPois()
+      .then((pois) => {
+        locHelper.syncFromGlobal(this);
+        return this.callRecommend(pois);
+      })
+      .catch(() => {
+        // 自动定位失败/拒绝 → 回退到 chooseLocation 手动选点
+        this.requestLocation();
+      });
   },
 
   onShow() {
+    // 先按当前时间重定位场景（手动选过的会话不动），后续推荐即用新场景
+    this._maybeRelocateScene();
     // 从其他 tab 返回时同步全局位置/POI 状态
     locHelper.syncFromGlobal(this);
     // 更新 tabBar 选中态
@@ -177,6 +210,7 @@ Page({
     if (!scene || scene === this.data.scene) return;
     // 加载中（首次推荐 / 换一批）禁止切换场景，避免并发请求与状态错乱
     if (this.data.loading || this.data.refreshing) return;
+    this.sceneUserSelected = true; // 本会话标记为手动选择，不再被时间自动覆盖
     this._setScene(scene);
     this.setData({
       excludeIds: [],
@@ -362,7 +396,8 @@ Page({
     }
 
     const currentRecs = this.data.recommendations.map((r) => r.poi_id);
-    let newExclude = [...this.data.excludeIds, ...currentRecs];
+    // 同理避免数组展开：用 concat 合并两段 id 列表（等价于 [...excludeIds, ...currentRecs]）。
+    let newExclude = this.data.excludeIds.concat(currentRecs);
     // exclude 上限放宽到 15（≈ 两轮"换一批"），避免前几轮推过的店在第 4 次又冒出来。
     // poi 池一般几十家，15 仍远小于池子规模，不会把候选榨干。
     if (newExclude.length > 15) {
@@ -382,7 +417,7 @@ Page({
 
   _useFallbackRecommend() {
     const scored = scoreCandidates(this.data.pois, this.data.scene, this.data.excludeIds);
-    const top3 = [...scored].sort((a, b) => b.score - a.score).slice(0, 3);
+    const top3 = scored.slice().sort((a, b) => b.score - a.score).slice(0, 3);
 
     const recommendations = top3.map((item) => ({
       poi_id: item.poi_id,

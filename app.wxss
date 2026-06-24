@@ -92,9 +92,14 @@ button::after {
   font-weight: 700;
   color: #2B2118;
   flex: 1;
+  min-width: 0;
   line-height: 1.3;
-  /* 长名称处理：允许换行，防止溢出（text 组件不支持 line-clamp，用换行方案） */
-  word-break: break-all;
+  /* 长名称处理：最多 2 行后省略号，保证卡片高度稳定 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
   overflow-wrap: break-word;
 }
 .card-type {
@@ -126,8 +131,8 @@ button::after {
   line-height: 1.55;
   margin-bottom: 22rpx;
   border-left: 6rpx solid #FF6B35;
-  /* 长描述处理：允许换行，防止溢出 */
-  word-break: break-all;
+  /* 长描述处理：按词换行，CJK 按字符，避免在标点中间生硬断行 */
+  word-break: break-word;
   overflow-wrap: break-word;
 }
 .card-actions {
@@ -180,4 +185,102 @@ button::after {
 .tone-late {
   background: #5B4034 !important;
   color: #FFFFFF !important;
+}
+
+/* === 悬浮红包按钮（CPS 入口，index 与 mystery 共享） === */
+.float-coupon {
+  position: fixed;
+  right: 40rpx;
+  bottom: calc(160rpx + env(safe-area-inset-bottom));
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF6B35, #FF9F1C);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(255, 107, 53, 0.4);
+  z-index: 100;
+  animation: couponPulse 2.4s ease-in-out infinite;
+}
+.float-coupon-icon {
+  font-size: 48rpx;
+  line-height: 1;
+}
+.float-coupon-badge {
+  position: absolute;
+  top: -6rpx;
+  right: -6rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
+  border-radius: 16rpx;
+  background: #E63946;
+  color: #FFFFFF;
+  font-size: 22rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #FFFFFF;
+  animation: none;
+}
+@keyframes couponPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 8rpx 24rpx rgba(255, 107, 53, 0.4); }
+  50% { transform: scale(1.08); box-shadow: 0 12rpx 32rpx rgba(255, 107, 53, 0.55); }
+}
+
+/* === 红包选择弹窗（底部 action-sheet，index 与 mystery 共享） === */
+.coupon-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0);
+  z-index: 200;
+  pointer-events: none;
+  transition: background 0.25s ease;
+}
+.coupon-mask-show {
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+.coupon-picker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #FFF8F3;
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 12rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  transform: translateY(100%);
+  transition: transform 0.28s ease;
+}
+.coupon-picker-show {
+  transform: translateY(0);
+}
+.coupon-picker-title {
+  text-align: center;
+  font-size: 26rpx;
+  color: #8A7968;
+  padding: 18rpx 0 22rpx;
+  font-weight: 600;
+}
+.coupon-picker-item {
+  background: linear-gradient(135deg, #FF6B35, #FF9F1C);
+  color: #FFFFFF;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+  padding: 26rpx 0;
+  border-radius: 40rpx;
+  margin-bottom: 18rpx;
+  box-shadow: 0 4rpx 14rpx rgba(255, 107, 53, 0.25);
+}
+.coupon-picker-cancel {
+  text-align: center;
+  font-size: 28rpx;
+  color: #8A7968;
+  padding: 20rpx 0 8rpx;
 }
