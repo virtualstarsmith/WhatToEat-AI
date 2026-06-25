@@ -80,10 +80,6 @@
       {
         "type": "folder",
         "value": "参考图片"
-      },
-      {
-        "type": "folder",
-        "value": "output"
       }
     ],
     "include": []
