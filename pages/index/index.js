@@ -553,17 +553,6 @@ Page({
     });
   },
 
-  onCopyAddr(e) {
-    // restaurant-card 组件 triggerEvent('copyaddr', { address })
-    const card = (this.data.cardsView || []).find((c) => c.address === e.detail.address) || {};
-    const address = e.detail.address;
-    if (!address) return;
-    wx.setClipboardData({
-      data: address || card.name,
-      success: () => wx.showToast({ title: '地址已复制', icon: 'success' })
-    });
-  },
-
   onOpenCommercial(e) {
     // restaurant-card 组件 triggerEvent('coupon', { poi_id, name })
     const name = e.detail.name;

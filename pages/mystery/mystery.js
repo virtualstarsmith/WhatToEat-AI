@@ -327,15 +327,6 @@ Page({
     });
   },
 
-  onMysteryCopyAddr() {
-    const card = this.data.mysteryBox.currentResult;
-    if (!card) return;
-    wx.setClipboardData({
-      data: card.address || card.name,
-      success: () => wx.showToast({ title: '地址已复制', icon: 'success' })
-    });
-  },
-
   // 平台级「领红包」入口点击（coupon-float 组件 triggerEvent('open', { key })）
   onOpenPlatform(e) {
     const key = e.detail.key;

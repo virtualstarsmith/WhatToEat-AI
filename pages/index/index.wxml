@@ -85,7 +85,6 @@
         card="{{item}}"
         variant="index"
         bind:navigate="onOpenNav"
-        bind:copyaddr="onCopyAddr"
         bind:coupon="onOpenCommercial"
       />
     </view>

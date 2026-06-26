@@ -149,10 +149,6 @@ button::after {
   background: #FFF8F3;
   color: #FF6B35;
 }
-.action-btn.primary {
-  background: #FF6B35;
-  color: #FFFFFF;
-}
 .action-btn.ghost {
   background: transparent;
   color: #8A7968;

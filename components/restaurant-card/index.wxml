@@ -8,16 +8,16 @@
     <text class="meta-item">⭐ {{card.ratingText}}</text>
     <text class="meta-item" wx:if="{{card.costText}}">💰 {{card.costText}}</text>
   </view>
+  <!-- 地址行：点击触发导航（openLocation）。地址为空时不渲染 -->
+  <view class="card-loc" wx:if="{{card.address}}" bindtap="onNavigate">
+    <text class="loc-text">📍 {{card.address}}</text>
+    <text class="loc-arrow">›</text>
+  </view>
   <view class="card-reason" wx:if="{{card.reason}}">
     <block wx:if="{{variant === 'index'}}">💡 </block>{{card.reason}}
   </view>
-  <view class="card-actions">
-    <view class="action-btn primary" bindtap="onNavigate">导航</view>
-    <view class="action-btn" bindtap="onCopyAddr">复制地址</view>
-    <view
-      class="action-btn ghost"
-      wx:if="{{variant === 'index' && card.shopEntry}}"
-      bindtap="onCoupon"
-    >🎫</view>
+  <!-- 操作区：仅首页卡命中 shopEntry 时渲染🎫（导航已迁至地址行，复制地址已移除） -->
+  <view class="card-actions" wx:if="{{variant === 'index' && card.shopEntry}}">
+    <view class="action-btn ghost" bindtap="onCoupon">🎫</view>
   </view>
 </view>

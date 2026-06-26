@@ -1,4 +1,33 @@
 /* restaurant-card 复用全局 app.wxss 的 .card/.card-header/.action-btn 等类
    （通过 options.addGlobalClass=true），故组件 wxss 仅放组件专属微调。
    mystery-card / card-mismatch 样式见 pages/mystery/mystery.wxss（仅盲盒页使用，
-   因 mystery 页设置 apply-shared，组件可继承）。本文件保持空。 */
+   因 mystery 页设置 apply-shared，组件可继承）。 */
+
+/* 地址行：点击触发导航（openLocation）。
+   与 card-reason 同色系（#FFF8F3），暗示"可交互区块"，区别于只读的 card-meta。 */
+.card-loc {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18rpx;
+  padding: 10rpx 14rpx;
+  background: #FFF8F3;
+  border-radius: 10rpx;
+}
+.card-loc:active {
+  opacity: 0.7;
+}
+.loc-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: #8A7968;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.loc-arrow {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  color: #FF6B35;
+  margin-left: 8rpx;
+}
