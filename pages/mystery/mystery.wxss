@@ -201,6 +201,16 @@
   border-color: rgba(242, 169, 59, 0.5);
   background: linear-gradient(135deg, #FFF4D8 0%, #FFFFFF 100%);
 }
+/* 当前在上方展示的那条（点击后选中态） */
+.history-card-active {
+  border-color: #FF6B35;
+  background: linear-gradient(135deg, #FFF0E8 0%, #FFFFFF 100%);
+  box-shadow: 0 4rpx 16rpx rgba(255, 107, 53, 0.25);
+}
+.history-card-active .history-rank {
+  background: linear-gradient(135deg, #FF6B35 0%, #F2A93B 100%);
+  color: #FFFFFF;
+}
 .history-rank {
   flex-shrink: 0;
   font-size: 22rpx;
@@ -255,8 +265,16 @@
 }
 .history-arrow {
   flex-shrink: 0;
-  font-size: 36rpx;
-  color: #8A7968;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #FF6B35;
+  background: rgba(255, 107, 53, 0.1);
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 12rpx;
   line-height: 1;
 }

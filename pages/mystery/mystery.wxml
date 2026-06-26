@@ -79,8 +79,8 @@
           <view class="history-list">
             <view
               wx:for="{{mysteryBox.history}}"
-              wx:key="poi_id"
-              class="history-card {{index === 0 ? 'history-card-latest' : ''}}"
+              wx:key="rank"
+              class="history-card {{index === 0 ? 'history-card-latest' : ''}} {{mysteryBox.status === 'revealed' && mysteryBox.currentRank === item.rank ? 'history-card-active' : ''}}"
               data-idx="{{index}}"
               bindtap="onReopenHistory"
             >
@@ -96,10 +96,11 @@
                   <text class="history-meta-item" wx:if="{{item.card.costText}}">{{item.card.costText}}</text>
                 </view>
               </view>
-              <text class="history-arrow">›</text>
+              <!-- 右侧并非「进入」入口，而是提示点击后该店铺会在上方展示，故用上箭头 -->
+              <view class="history-arrow">↑</view>
             </view>
           </view>
-          <view class="history-tip">点击任意一条可重新查看详情</view>
+          <view class="history-tip">点击任意一条，可在上方重新展示该店铺</view>
         </view>
       </block>
     </view>

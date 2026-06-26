@@ -98,6 +98,7 @@ Page({
     mysteryBox: {
       status: 'idle',        // idle | opening | revealed
       currentResult: null,
+      currentRank: 0,        // 当前在上方展示的历史条目序号（rank），用于列表选中态
       history: [],
       openedIds: [],
       lastOpenTime: 0,
@@ -158,6 +159,7 @@ Page({
       mysteryBox: {
         status: 'idle',
         currentResult: null,
+        currentRank: 0,
         history: [],
         openedIds: [],
         lastOpenTime: 0,
@@ -276,6 +278,7 @@ Page({
     this.setData({
       'mysteryBox.status': 'revealed',
       'mysteryBox.currentResult': cardView,
+      'mysteryBox.currentRank': history[0].rank,
       'mysteryBox.history': history,
       'mysteryBox.openedIds': openedIds
     });
@@ -291,7 +294,8 @@ Page({
     if (!item || !item.card) return;
     this.setData({
       'mysteryBox.status': 'revealed',
-      'mysteryBox.currentResult': item.card
+      'mysteryBox.currentResult': item.card,
+      'mysteryBox.currentRank': item.rank
     });
   },
 
