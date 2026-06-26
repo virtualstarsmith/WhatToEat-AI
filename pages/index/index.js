@@ -9,6 +9,7 @@ const { normalizePoiType } = require('../../utils/util.js');
 const { scoreCandidates: scoreCandidatesBase } = require('../../utils/scoring.js');
 const { detectScene, formatDistance, formatRating, pad2 } = require('../../utils/recommend.js');
 const { callAiRecommend } = require('../../utils/aiRecommend.js');
+const { filterPois } = require('../../utils/poiFilter.js');
 
 // 场景语气色（toneClass）现收敛到 config/scenes.js 单一事实源，不再在本页维护 SCENE_TONE_MAP。
 const SCENE_OPTIONS = SCENES.map((scene) => ({
@@ -125,7 +126,35 @@ Page({
     refreshCount: 0,
     lastRefreshTime: 0,
     dailyRefreshLimit: 20,
-    cooldownTime: 2000
+    cooldownTime: 2000,
+    // 快捷筛选（见 06-26-ai-pick-filter-bar/design.md）
+    filterGroups: [
+      {
+        key: 'price',
+        options: [
+          { value: '', label: '不限' },
+          { value: 'cheap', label: '¥30内' },
+          { value: 'medium', label: '¥50内' }
+        ]
+      },
+      {
+        key: 'distance',
+        options: [
+          { value: '', label: '不限' },
+          { value: 'near', label: '500m' },
+          { value: 'walk', label: '1km' }
+        ]
+      },
+      {
+        key: 'category',
+        options: [
+          { value: '', label: '不限' },
+          { value: 'fastfood', label: '快餐' },
+          { value: 'formal', label: '正餐' }
+        ]
+      }
+    ],
+    filters: { price: '', distance: '', category: '' }
   },
 
   _setScene(scene) {
@@ -228,6 +257,31 @@ Page({
     }
   },
 
+  // 快捷筛选切换（复用场景切换的重置模式：清 exclude/推荐，重推）
+  onSelectFilter(e) {
+    const { key, value } = e.currentTarget.dataset;
+    if (!key) return;
+    // loading/refreshing 中禁止切换，避免并发与状态错乱（与 onSelectScene 一致）
+    if (this.data.loading || this.data.refreshing) return;
+    // 点当前已选档位 = 无操作
+    if (this.data.filters[key] === value) return;
+
+    const nextFilters = Object.assign({}, this.data.filters, { [key]: value });
+    this.setData({
+      filters: nextFilters,
+      excludeIds: [],
+      recommendations: [],
+      cardsView: [],
+      source: '',
+      error: ''
+    });
+
+    if (this.data.locationOk && this.data.pois.length > 0) {
+      this.setData({ loading: true });
+      this.callRecommend(this.data.pois);
+    }
+  },
+
   // ===== 位置相关（接入 locationHelper）=====
 
   requestLocation() {
@@ -319,7 +373,15 @@ Page({
   async callRecommend(pois) {
     // 本次推荐消费了当前 pois 版本，标记以供 onShow 判断是否需要作废
     locHelper.markPoisConsumed(this);
-    const scored = scoreCandidates(pois, this.data.scene, this.data.excludeIds);
+    // 快捷筛选：先过滤再打分（见 06-26-ai-pick-filter-bar/design.md §3）
+    const filtered = filterPois(pois, this.data.filters);
+    if (filtered.length === 0) {
+      // 池子耗尽：提示放宽条件，不闪空（保留旧 cardsView）
+      wx.showToast({ title: '当前筛选下无商家，试试放宽条件', icon: 'none' });
+      this.setData({ loading: false, refreshing: false });
+      return;
+    }
+    const scored = scoreCandidates(filtered, this.data.scene, this.data.excludeIds);
     // AI 候选保留 2 个探索位，避免候选全部同质化；poi_id 已统一为字符串。
     // 连续"换一批"导致 exclude 较多时，把候选数从 7 扩到 10，
     // 避免候选池（7 个）几乎被 exclude 填满、反复推同几家。
@@ -416,7 +478,13 @@ Page({
   },
 
   _useFallbackRecommend() {
-    const scored = scoreCandidates(this.data.pois, this.data.scene, this.data.excludeIds);
+    const filtered = filterPois(this.data.pois, this.data.filters);
+    if (filtered.length === 0) {
+      // 兜底也走过滤后池子；为空时静默返回（callRecommend 已处理过正常路径的提示）
+      this.setData({ loading: false, refreshing: false });
+      return;
+    }
+    const scored = scoreCandidates(filtered, this.data.scene, this.data.excludeIds);
     const top3 = scored.slice().sort((a, b) => b.score - a.score).slice(0, 3);
 
     const recommendations = top3.map((item) => ({

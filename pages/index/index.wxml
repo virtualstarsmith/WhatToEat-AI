@@ -33,6 +33,29 @@
       </scroll-view>
     </view>
 
+    <!-- 快捷筛选栏（价格/距离/类别，见 06-26-ai-pick-filter-bar） -->
+    <view class="filter-section" wx:if="{{locationOk}}">
+      <view
+        class="filter-group"
+        wx:for="{{filterGroups}}"
+        wx:for-item="group"
+        wx:key="key"
+      >
+        <text class="filter-label">{{group.key === 'price' ? '人均' : (group.key === 'distance' ? '距离' : '类别')}}</text>
+        <view class="filter-chips">
+          <view
+            wx:for="{{group.options}}"
+            wx:for-item="opt"
+            wx:key="value"
+            class="filter-chip {{filters[group.key] === opt.value ? 'filter-chip-active' : ''}} {{(loading || refreshing) && filters[group.key] !== opt.value ? 'filter-chip-disabled' : ''}}"
+            data-key="{{group.key}}"
+            data-value="{{opt.value}}"
+            bindtap="onSelectFilter"
+          >{{opt.label}}</view>
+        </view>
+      </view>
+    </view>
+
     <!-- 兜底提示：不暴露"失败"，用中性语气承接，避免戳破推荐的连续感 -->
     <view class="banner-fallback" wx:if="{{source === 'fallback' && cardsView.length > 0}}">
       💬 为你又挑了几家，看看哪家合口味
