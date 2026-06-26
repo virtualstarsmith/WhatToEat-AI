@@ -8,7 +8,7 @@ Component({
     list: [
       {
         pagePath: '/pages/mystery/mystery',
-        text: '抽签决定'
+        text: '手气抽签'
       },
       {
         pagePath: '/pages/index/index',
