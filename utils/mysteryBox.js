@@ -190,12 +190,12 @@ function generateMysteryReason(poi, currentScene) {
   // 正常抽签文案（随机选择，突出惊喜/幸运调性）
   const reasons = [
     `🎁 抽中「${name}」！${ratingText}的好店`,
-    `✨ 今日这一签：这家${type}距离仅${distanceText}`,
+    `✨ 手气不错：这家${type}距离仅${distanceText}`,
     `🌟 惊喜发现！「${name}」等你来尝鲜`,
     `🍀 今日幸运：${ratingText}的${type}推荐给你`,
-    `🎯 隐藏好签：藏在${distanceText}外的宝藏小店`,
-    `💫 缘分到了：「${name}」，${ratingText}值得一试`,
-    `🌈 惊喜降临：「${name}」，距离${distanceText}`
+    `🎯 签运不错：藏在${distanceText}外的宝藏小店`,
+    `💫 手气爆棚：「${name}」，${ratingText}值得一试`,
+    `🌈 运气来了：「${name}」，距离${distanceText}`
   ];
   return reasons[Math.floor(Math.random() * reasons.length)];
 }

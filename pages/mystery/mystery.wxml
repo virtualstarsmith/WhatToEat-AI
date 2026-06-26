@@ -19,8 +19,8 @@
       <!-- 未授权位置：定位中 / 引导用户授权 -->
       <view class="mystery-empty" wx:if="{{!locationOk}}">
         <text class="empty-icon">{{locating ? '📡' : '🎁'}}</text>
-        <text class="empty-title">{{locating ? '定位中…' : '抽个今天吃什么'}}</text>
-        <text class="empty-desc" wx:if="{{!locating}}">点击右上角「授权」定位后，\n为你随机抽一家附近餐厅</text>
+        <text class="empty-title">{{locating ? '定位中…' : '试试你的手气'}}</text>
+        <text class="empty-desc" wx:if="{{!locating}}">点击右上角「授权」定位后，\n抽一家附近餐厅，看今天手气如何</text>
       </view>
 
       <!-- 盲盒主体（已授权） -->
@@ -29,14 +29,14 @@
           <!-- 池耗尽状态 -->
           <view class="box-idle-wrap" wx:if="{{mysteryBox.poolExhausted}}">
             <view class="box-icon box-exhausted">🎯</view>
-            <text class="box-hint">附近的签已全部抽完</text>
+            <text class="box-hint">附近的好签都被抽完了</text>
             <text class="box-sub-hint">在上方点击「刷新」换个位置，解锁更多签</text>
           </view>
 
           <!-- 待机状态：毛玻璃盲盒 -->
           <view class="box-idle-wrap" wx:elif="{{mysteryBox.status === 'idle'}}">
             <view class="box-icon">🎁</view>
-            <text class="box-hint">点击下方按钮，抽今日这一签</text>
+            <text class="box-hint">点下方按钮，试试今天的手气</text>
           </view>
 
           <!-- 开盒动画 -->
@@ -47,7 +47,7 @@
 
           <!-- 揭晓结果 -->
           <view class="box-revealed-wrap" wx:else>
-            <view class="reveal-badge">🎉 抽中这家</view>
+            <view class="reveal-badge">🎉 看看你抽到了啥</view>
             <restaurant-card
               card="{{mysteryBox.currentResult}}"
               variant="mystery"
@@ -65,7 +65,7 @@
             disabled="{{mysteryBox.status === 'opening' || mysteryBox.poolExhausted}}"
             loading="{{mysteryBox.status === 'opening'}}"
           >
-            {{mysteryBox.poolExhausted ? '🎯 已抽完' : (mysteryBox.status === 'opening' ? '摇签中…' : (mysteryBox.status === 'revealed' ? '🍀 重新抽' : '✨ 开始抽签'))}}
+            {{mysteryBox.poolExhausted ? '🎯 已抽完' : (mysteryBox.status === 'opening' ? '摇签中…' : (mysteryBox.status === 'revealed' ? '🍀 再试一次手气' : '✨ 试试手气'))}}
           </button>
         </view>
 
