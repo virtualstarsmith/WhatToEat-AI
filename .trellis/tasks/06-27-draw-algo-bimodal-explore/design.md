@@ -1,6 +1,8 @@
 # 抽签算法重塑 - 技术设计
 
-> 配套 `prd.md`。聚焦：双峰探索的概率实现、档位界定、长尾加成修正、timer 清理、reason 分档。
+> 配套 `prd.md`。聚焦：降幂加权随机探索（p=0.5）、tier 判定、长尾加成修正、timer 清理、reason 分档。
+>
+> **方案演进：** 初版设计为双峰硬切 → 调研后改 softmax → sim 验证 softmax 在本场景头部通吃失败 → 最终选定降幂加权随机 p=0.5（数据驱动）。教训：方案选型必须先用真实分布验证。
 
 ## 1. 现状回顾（mysteryBox.js）
 
@@ -16,82 +18,85 @@ mysteryBoxRecommend
 
 `result` 形状：`{ poi_id, poi, fromExplore: bool }`。`fromExplore` 控制页面是否调 AI。
 
-## 2. Softmax 探索设计（替代双峰硬切）
+## 2. 降幂加权随机探索设计（替代 midBandPick）
 
-### 设计依据（文献调研结论）
+### 方案选型（数据驱动，已用模拟验证）
 
-放弃"双峰分位 + 概率硬切"方案（4 个魔数、分布不连续、纯经验拍脑袋），改用 **Softmax (Boltzmann) 探索**。依据：
-- Sutton & Barto 经典教材、NeurIPS "Boltzmann Exploration Done Right"：softmax 比 ε-greedy 探索更智能，天生产出"长尾宽、头部窄"的连续分布。
-- 排除的替代方案：Thompson Sampling / UCB / 退火 / Mellowmax 自适应——这些**都依赖奖励反馈闭环或时间轴**，而抽签是无反馈、每次会话独立的一次性场景，无法应用。
+候选方案均用 `utils/mysteryBox.sim.js` 跑 10000 次蒙特卡洛验证（候选 N=31，权重范围 0.18~0.78，模拟真实 POI 池梯度）：
 
-**τ 的定参方法（关键，替代凭感觉取值）：**
-- 文献铁律：τ 只有相对权重量纲才有意义 → **探索前必须归一化权重到 [0,1]**。
-- 退火/自适应在无反馈场景不成立 → τ 只能取**固定值**。
-- 固定 τ 的取值不靠拍脑袋 → **用蒙特卡洛网格搜索**：模拟 N 次抽签，统计头部/长尾开出率，选最接近产品目标的 τ。
+| 方案 | 头部(top10%) | 中段 | 长尾(bottom40%) | 结论 |
+|---|---|---|---|---|
+| softmax τ=0.1 | 57.0% | 42.7% | 0.4% | ❌ 头部通吃，长尾消失 |
+| softmax τ=0.3 | 26.8% | 62.3% | 10.9% | ❌ 仍严重偏头部 |
+| **加权随机 p=0.5（√weight）** | **12.2%** | **54.7%** | **33.1%** | ✅ **命中目标，选定** |
+| 加权随机 p=1.0（现状） | 15.3% | 58.5% | 26.3% | 已达标，长尾略少 |
+| 加权随机 p=0.2 | 10.9% | 50.5% | 38.6% | 长尾偏重，质量下降 |
+
+**选定 p=0.5（开根号）的理由：**
+1. **数据命中目标**：头部 12%（手气爆棚稀缺真实）、长尾 33%（冷门惊喜常态），正中产品体感。
+2. **改动极小**：现有 `weightedRandomPick` 加一个 `Math.pow(weight, 0.5)`。
+3. **sqrt 压缩权重差距**（不开指数放大），让长尾有合理概率但保留头部优势——温和探索，比 softmax 友好，比双峰硬切自然。
+4. **无 τ、无归一化、无双池**——最简方案。
+
+**为什么不选 softmax（设计教训）：** softmax 用 exp 指数放大权重差距，而我们的权重分布（头部 0.78 vs 长尾 0.18，归一化后 1.0 vs 0.0）天然有大梯度，exp 放大后 `exp(1/0.2)=148` 倍差距，导致头部通吃、长尾趋零。理论优雅但在我们的权重分布下结构性失败。**教训：方案选型必须先用真实分布数据验证，不能只看理论。**
 
 ### 整体概率结构
 
 ```
-ε=0.15  → 探索档：softmax 选（归一化权重，温度 τ）
-1-ε     → 利用档：加权随机 weightedRandomPick（不变）
+ε=0.15 探索档 → 降幂加权随机 P∝√weight（全池，p=0.5，更平权，鼓励长尾）
+1-ε    利用档 → 加权随机 P∝weight（全池，p=1.0，现状不变，偏头部）
 ```
 
-ε 从 0.3 降到 0.15：softmax 探索质量高于纯随机，探索比例可降，主体仍是加权随机（稳）。也贴合行业 ε-greedy 探索 5-15% 的惯例。
+探索档与利用档的**唯一差别是 p 值**：探索档 p=0.5（压缩差距，长尾更易出），利用档 p=1.0（保留差距，偏头部）。语义清晰、实现极简。
+
+ε 从 0.3 降到 0.15：探索档已用降幂加权（质量高于纯随机），探索比例可降，主体仍是利用档（稳）。也贴合行业 ε-greedy 探索 5-15% 的惯例。
 
 ### 探索档实现（替换 midBandPick）
 
 ```js
-// 归一化权重到 [0,1]：让温度 τ 有可比量纲（文献铁律）。
-// 候选全相同（min==max）时返回等权，softmax 退化为均匀随机——可接受。
-function normalizeWeights(weighted) {
-  const ws = weighted.map((c) => c.weight || 0);
-  const min = Math.min.apply(null, ws);
-  const max = Math.max.apply(null, ws);
-  if (max === min) return weighted.map((c) => ({ ...c, normWeight: 0.5 }));
-  return weighted.map((c) => ({
-    ...c,
-    normWeight: ((c.weight || 0) - min) / (max - min)
-  }));
+// 降幂加权随机：P(i) ∝ weight_i^p。p<1 压缩差距（鼓励长尾），p=1 即原加权随机。
+// 复用 weightedRandomPick，传入幂次参数。
+function weightedPowPick(candidates, p) {
+  const weights = candidates.map((c) => Math.pow(c.weight || 0, p));
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+  if (totalWeight <= 0) {
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+  let random = Math.random() * totalWeight;
+  for (let i = 0; i < candidates.length; i++) {
+    random -= weights[i];
+    if (random <= 0) return candidates[i];
+  }
+  return candidates[candidates.length - 1];
 }
 
-// Softmax(Boltzmann) 采样：P(i) = exp(normWeight_i / τ) / Σ exp(normWeight_j / τ)
-// 返回选中的候选及其在池中的权重排名（供 reason 分档）。
-const TAU = 0.1; // 温度，实现时由模拟脚本网格搜索验证后定稿（见 §2 末尾）
-function softmaxPick(weighted) {
-  const normalized = normalizeWeights(weighted);
-  const exps = normalized.map((c) => Math.exp(c.normWeight / TAU));
-  const total = exps.reduce((s, e) => s + e, 0);
-  let r = Math.random() * total;
-  for (let i = 0; i < normalized.length; i++) {
-    r -= exps[i];
-    if (r <= 0) {
-      return { picked: normalized[i], pickedIndex: i };
-    }
-  }
-  return { picked: normalized[normalized.length - 1], pickedIndex: normalized.length - 1 };
-}
+const EXPLORE_POWER = 0.5; // √weight，由 sim 网格搜索验证（见 §2 末尾）
 
 function explorePick(weighted) {
-  // 候选过少：softmax 仍可用（概率自动归一），无需特判；n==1 时唯一候选必中。
-  return softmaxPick(weighted);
+  return weightedPowPick(weighted, EXPLORE_POWER);
 }
 ```
 
-### reason 档位判定（事后统计，非算法分支）
+> **实现选择：** `weightedPowPick(candidates, p)` 是 `weightedRandomPick` 的参数化版（p=1 退化为原逻辑）。可让 `weightedRandomPick` 直接接收可选 p 参数（默认 1.0），避免两份近似函数。见 implement。
 
-softmax 不产出离散 tier。改为**按选中店在池中的权重排名**事后判定档位：
+### reason 档位判定（事后统计）
+
+降幂加权不产出离散 tier。按选中店在池中的**权重排名**事后判定档位：
 
 ```js
-// explorePick 返回 pickedIndex 后，按排名分位定档（排名基于权重降序）
-function tierByRank(pickedIndex, n) {
-  const sortedRank = ...; // 见下方：需要把 pickedIndex 换算成权重降序排名
-  // top 20% → explore-head（手气爆棚）
-  // bottom 40% → explore-tail（冷门惊喜）
-  // 中间 → explore-mid（中性）
+// picked: 选中的候选；weighted: 全部候选
+// 返回 tier：'explore-head' | 'explore-mid' | 'explore-tail'
+function tierByRank(picked, weighted) {
+  const sorted = weighted.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0)); // 降序
+  const n = sorted.length;
+  const rank = sorted.findIndex((c) => c.poi_id === picked.poi_id); // 0=最高
+  if (rank < Math.max(1, Math.floor(n * 0.2))) return 'explore-head';   // top 20% → 手气爆棚
+  if (rank >= Math.floor(n * 0.6)) return 'explore-tail';                // bottom 40% → 冷门惊喜
+  return 'explore-mid';                                                  // 中间
 }
 ```
 
-**实现注意：** `pickedIndex` 是在 `normalized`（原数组顺序）里的下标，不是排序后的排名。需先按权重降序排序，找出 picked 在排序数组中的位置，再算分位。详见 implement。
+**头部阈值取 top20%（而非 top10%）：** reason 分档是为文案调性服务的，不必和 sim 统计的"top10%开出率"严格对齐。top20% 让"手气爆棚"文案触发频率稍高（避免太罕见用户感知不到），是 UX 权衡，不影响实际分布。
 
 ### result 形状扩展（新增 tier）
 
@@ -109,8 +114,8 @@ function mysteryBoxRecommend(pois, openedIds, currentScene) {
   // ... qualifyFilter / 去重 / weighted（不变）
 
   if (Math.random() < epsilon) {
-    const { picked, pickedIndex } = explorePick(weighted);
-    const tier = tierByRank(picked, pickedIndex, weighted);
+    const picked = explorePick(weighted);
+    const tier = tierByRank(picked, weighted);
     return { poi_id: picked.poi_id, poi: picked.poi, fromExplore: true, tier };
   }
   const picked = weightedRandomPick(weighted);
@@ -118,18 +123,9 @@ function mysteryBoxRecommend(pois, openedIds, currentScene) {
 }
 ```
 
-### τ 的定稿流程（实现第一步，数据驱动）
+### EXPLORE_POWER 的定稿依据（数据已在 sim 脚本固化）
 
-`TAU` 不在 design 写死，而是在 implement 第一步用模拟脚本确定：
-
-1. 写 `utils/mysteryBox.sim.js`（仅开发期用，不进生产 bundle）：mock 一组真实分布的候选权重（参考实际 POI 池的权重范围），跑 10000 次 mysteryBoxRecommend，统计不同 τ ∈ {0.05, 0.08, 0.1, 0.15, 0.2} 下：
-   - 头部(top10%)开出率
-   - 长尾(bottom40%)开出率
-   - 利用档与探索档的实际占比
-2. 输出表格，与产品目标体感对照，选定 τ。
-3. 选定后把 TAU 写死进 mysteryBox.js，sim 脚本保留供回归。
-
-**产品目标体感（待数据确认）：** 头部开出率希望落在 ~10-20%（手气爆棚稀缺但真实存在），长尾开出率 ~25-35%（冷门惊喜常态）。具体 τ 由模拟数据反推。
+`EXPLORE_POWER=0.5` 由 `utils/mysteryBox.sim.js` 网格搜索验证（p ∈ {1.0, 0.7, 0.5, 0.3, 0.2, 0.1}）。sim 脚本保留供回归。选定 p=0.5 的产品目标：头部开出率 ~10-20%、长尾开出率 ~25-35%。
 
 
 ## 3. 长尾加成修正（评审问题4）
