@@ -1,7 +1,7 @@
 {
   "pages": [
-    "pages/index/index",
-    "pages/mystery/mystery"
+    "pages/mystery/mystery",
+    "pages/index/index"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -20,12 +20,12 @@
     "backgroundColor": "#FFFFFF",
     "list": [
       {
-        "pagePath": "pages/index/index",
-        "text": "AI甄选"
+        "pagePath": "pages/mystery/mystery",
+        "text": "抽签决定"
       },
       {
-        "pagePath": "pages/mystery/mystery",
-        "text": "盲盒惊喜"
+        "pagePath": "pages/index/index",
+        "text": "AI甄选"
       }
     ]
   },

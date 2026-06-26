@@ -7,12 +7,12 @@ Component({
     selectedColor: '#FF6B35',
     list: [
       {
-        pagePath: '/pages/index/index',
-        text: 'AI甄选'
+        pagePath: '/pages/mystery/mystery',
+        text: '抽签决定'
       },
       {
-        pagePath: '/pages/mystery/mystery',
-        text: '盲盒惊喜'
+        pagePath: '/pages/index/index',
+        text: 'AI甄选'
       }
     ]
   },

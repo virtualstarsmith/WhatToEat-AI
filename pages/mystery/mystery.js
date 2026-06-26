@@ -120,7 +120,7 @@ Page({
     locHelper.syncFromGlobal(this);
     // 更新 tabBar 选中态
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 });
+      this.getTabBar().setData({ selected: 0 });
     }
     // pois 在本页非活跃期间被更新（如在 AI 页切换了定位）→ 重置盲盒，清掉旧位置开过的盒
     if (locHelper.poisUpdatedSince(this)) {

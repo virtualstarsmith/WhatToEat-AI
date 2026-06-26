@@ -19,8 +19,8 @@
       <!-- 未授权位置：引导用户授权 -->
       <view class="mystery-empty" wx:if="{{!locationOk}}">
         <text class="empty-icon">🎁</text>
-        <text class="empty-title">开启你的美食盲盒</text>
-        <text class="empty-desc">点击右上角「授权」定位后，\n随机为你推荐附近餐厅</text>
+        <text class="empty-title">抽个今天吃什么</text>
+        <text class="empty-desc">点击右上角「授权」定位后，\n为你随机抽一家附近餐厅</text>
       </view>
 
       <!-- 盲盒主体（已授权） -->

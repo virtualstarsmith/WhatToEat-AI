@@ -177,7 +177,7 @@ Page({
     locHelper.syncFromGlobal(this);
     // 更新 tabBar 选中态
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 0 });
+      this.getTabBar().setData({ selected: 1 });
     }
     // pois 在本页非活跃期间被更新（如在盲盒页切换了定位）→ 作废旧推荐
     if (locHelper.poisUpdatedSince(this)) {
