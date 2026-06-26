@@ -65,7 +65,7 @@
             disabled="{{mysteryBox.status === 'opening' || mysteryBox.poolExhausted}}"
             loading="{{mysteryBox.status === 'opening'}}"
           >
-            {{mysteryBox.poolExhausted ? '🎯 已抽完' : (mysteryBox.status === 'opening' ? '摇签中…' : (mysteryBox.status === 'revealed' ? '🔄 重新抽' : '✨ 开始抽签'))}}
+            {{mysteryBox.poolExhausted ? '🎯 已抽完' : (mysteryBox.status === 'opening' ? '摇签中…' : (mysteryBox.status === 'revealed' ? '🍀 重新抽' : '✨ 开始抽签'))}}
           </button>
         </view>
 
