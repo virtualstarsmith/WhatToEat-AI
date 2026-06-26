@@ -16,11 +16,11 @@
 
   <scroll-view scroll-y class="mystery-scroll">
     <view class="mystery-container">
-      <!-- 未授权位置：引导用户授权 -->
+      <!-- 未授权位置：定位中 / 引导用户授权 -->
       <view class="mystery-empty" wx:if="{{!locationOk}}">
-        <text class="empty-icon">🎁</text>
-        <text class="empty-title">抽个今天吃什么</text>
-        <text class="empty-desc">点击右上角「授权」定位后，\n为你随机抽一家附近餐厅</text>
+        <text class="empty-icon">{{locating ? '📡' : '🎁'}}</text>
+        <text class="empty-title">{{locating ? '定位中…' : '抽个今天吃什么'}}</text>
+        <text class="empty-desc" wx:if="{{!locating}}">点击右上角「授权」定位后，\n为你随机抽一家附近餐厅</text>
       </view>
 
       <!-- 盲盒主体（已授权） -->

@@ -107,12 +107,26 @@ Page({
     },
     // CPS 红包入口（与 index 页共享逻辑，用 coupon-float 组件渲染）
     platformButtons: [],
-    showCouponPicker: false
+    showCouponPicker: false,
+    locating: false  // 自动定位中（首屏静默定位，避免空状态闪烁）
   },
 
   onLoad() {
     this.setData({ scene: detectScene(), sceneShort: sceneLabel(detectScene()) });
     this.setData({ platformButtons: commercialHelper.getPlatformButtons() });
+    // 首屏自动定位：mystery 调换为 Tab1 后，用户直接落地本页，全局尚无 pois，
+    // 需主动触发静默定位（与 index onLoad 行为一致）。失败回退手动选点。
+    this.setData({ locating: true });
+    locHelper.locateAndGetPois()
+      .then((pois) => {
+        locHelper.syncFromGlobal(this);
+        this.setData({ locating: false });
+      })
+      .catch(() => {
+        // 自动定位失败/拒绝 → 回退到手动选点（chooseLocationAndGetPois）
+        this.setData({ locating: false });
+        this.requestLocation();
+      });
   },
 
   onShow() {
