@@ -130,6 +130,11 @@ Page({
   },
 
   onShow() {
+    // 若上次抽签在 opening 中途切走（onHide 已清 timer，但 status 仍卡在 opening），
+    // 重置为 idle，视为本次抽签作废——比"后台偷偷揭晓"更可控。
+    if (this.data.mysteryBox.status === 'opening') {
+      this.setData({ 'mysteryBox.status': 'idle' });
+    }
     // 每次显示时从全局同步位置与 POI 数据（其他 tab 可能已授权）
     locHelper.syncFromGlobal(this);
     // 更新 tabBar 选中态
@@ -140,6 +145,25 @@ Page({
     if (locHelper.poisUpdatedSince(this)) {
       locHelper.markPoisConsumed(this);
       this._resetMysteryBox();
+    }
+  },
+
+  onHide() {
+    // 页面隐藏（切 tab）时清理开盒动画 timer，避免后台触发脏 setData。
+    // status 若卡在 opening 由下次 onShow 重置。
+    this._clearOpenTimer();
+  },
+
+  onUnload() {
+    this._clearOpenTimer();
+  },
+
+  // 清理开盒动画 timer（onHide/onUnload/重置时调用）。
+  // timer id 存实例属性而非 data：不参与渲染，避免 setData 开销（与 _poisConsumedAt 同模式）。
+  _clearOpenTimer() {
+    if (this._openTimer) {
+      clearTimeout(this._openTimer);
+      this._openTimer = null;
     }
   },
 
@@ -169,6 +193,7 @@ Page({
   // ===== 盲盒逻辑 =====
 
   _resetMysteryBox() {
+    this._clearOpenTimer(); // 重置时不应有遗留的开盒揭晓
     this.setData({
       mysteryBox: {
         status: 'idle',
@@ -241,7 +266,11 @@ Page({
       aiReasonPromise = callMysteryAIReason(result.poi, this.data.scene);
     }
 
-    setTimeout(() => {
+    // 开盒动画 timer：保存 id 以便 onHide/onUnload/重置时清理，避免后台脏 setData。
+    // 设新 timer 前先清旧（防重入）。
+    this._clearOpenTimer();
+    this._openTimer = setTimeout(() => {
+      this._openTimer = null;
       this._revealMysteryBox(result, aiReasonPromise);
     }, 2000);
   },
@@ -251,8 +280,8 @@ Page({
     const poiScene = mb.detectPoiScene(poi);
     const isMismatch = mb.isSceneMismatch(poiScene, this.data.scene);
 
-    // 本地模板理由（保底，一定能拿到）
-    const fallbackReason = mb.generateMysteryReason(poi, this.data.scene);
+    // 本地模板理由（保底，一定能拿到）。tier 决定文案调性（手气爆棚/冷门惊喜/中段/利用）。
+    const fallbackReason = mb.generateMysteryReason(poi, this.data.scene, result.tier);
 
     // 场景严重不匹配（如夜宵时段开出早餐店）一律用模板的硬提示，不覆盖
     let reason = fallbackReason;
