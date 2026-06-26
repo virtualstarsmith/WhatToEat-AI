@@ -1,0 +1,30 @@
+{
+  "id": "v1-1-prd-refinement",
+  "name": "v1-1-prd-refinement",
+  "title": "V1.1 PRD 精简落地",
+  "description": "V1.1 PRD 评审后的精简落地：Tab 结构调整 + AI甄选快捷筛选栏 + 盲盒选中态修复收尾。砍掉所有无数据源/过度工程/个人开发者不可行的需求。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "WhatToEat-AI",
+  "assignee": "WhatToEat-AI",
+  "createdAt": "2026-06-26",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "06-26-mystery-selection-state-commit",
+    "06-26-tab-reorder-draw-first",
+    "06-26-ai-pick-filter-bar"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
