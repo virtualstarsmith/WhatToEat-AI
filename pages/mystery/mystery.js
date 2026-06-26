@@ -31,9 +31,9 @@ function buildMysteryPrompt(poi, scene) {
     {
       role: 'system',
       content:
-        '你是一个爱探索美食的朋友，刚刚帮用户开了一个"美食盲盒"——随机开出了附近一家店。' +
-        '这家店不一定是评分最高的，但开出来了就是缘分。用一句话（20 字以内）告诉用户' +
-        '为什么这家值得去试试，语气要带点惊喜感和"既然开出来了就去呗"的洒脱，' +
+        '你是一个爱探索美食的朋友，刚刚帮用户抽了一支"美食签"——随机抽中了附近一家店。' +
+        '这家店不一定是评分最高的，但抽中了就是缘分。用一句话（20 字以内）告诉用户' +
+        '为什么这家值得去试试，语气要带点惊喜感和"既然抽中了就去呗"的洒脱，' +
         '别复述评分距离。必须严格返回 JSON：{"reason":"一句话"}。'
     },
     {
@@ -193,7 +193,7 @@ Page({
 
     if (mbState.status === 'opening') return;
     if (mbState.poolExhausted) {
-      wx.showToast({ title: '附近盲盒已开完，换个位置吧', icon: 'none' });
+      wx.showToast({ title: '附近的签已抽完，换个位置吧', icon: 'none' });
       return;
     }
 
@@ -221,7 +221,7 @@ Page({
 
     if (!result) {
       this.setData({ 'mysteryBox.poolExhausted': true });
-      wx.showToast({ title: '附近盲盒已开完，换个位置吧', icon: 'none' });
+      wx.showToast({ title: '附近的签已抽完，换个位置吧', icon: 'none' });
       return;
     }
 

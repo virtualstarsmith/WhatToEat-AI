@@ -29,25 +29,25 @@
           <!-- 池耗尽状态 -->
           <view class="box-idle-wrap" wx:if="{{mysteryBox.poolExhausted}}">
             <view class="box-icon box-exhausted">🎯</view>
-            <text class="box-hint">附近盲盒已全部开完</text>
-            <text class="box-sub-hint">在上方点击「刷新」换个位置，解锁更多惊喜</text>
+            <text class="box-hint">附近的签已全部抽完</text>
+            <text class="box-sub-hint">在上方点击「刷新」换个位置，解锁更多签</text>
           </view>
 
           <!-- 待机状态：毛玻璃盲盒 -->
           <view class="box-idle-wrap" wx:elif="{{mysteryBox.status === 'idle'}}">
             <view class="box-icon">🎁</view>
-            <text class="box-hint">点击下方按钮，开启今日惊喜</text>
+            <text class="box-hint">点击下方按钮，抽今日这一签</text>
           </view>
 
           <!-- 开盒动画 -->
           <view class="box-opening-wrap" wx:elif="{{mysteryBox.status === 'opening'}}">
             <view class="box-icon box-shaking">🎁</view>
-            <text class="box-hint">开盒中…✨</text>
+            <text class="box-hint">摇签中…✨</text>
           </view>
 
           <!-- 揭晓结果 -->
           <view class="box-revealed-wrap" wx:else>
-            <view class="reveal-badge">🎉 恭喜开出</view>
+            <view class="reveal-badge">🎉 抽中这家</view>
             <restaurant-card
               card="{{mysteryBox.currentResult}}"
               variant="mystery"
@@ -65,14 +65,14 @@
             disabled="{{mysteryBox.status === 'opening' || mysteryBox.poolExhausted}}"
             loading="{{mysteryBox.status === 'opening'}}"
           >
-            {{mysteryBox.poolExhausted ? '🎯 已开完' : (mysteryBox.status === 'opening' ? '开盒中…' : (mysteryBox.status === 'revealed' ? '✨ 再开一次' : '✨ 开盲盒'))}}
+            {{mysteryBox.poolExhausted ? '🎯 已抽完' : (mysteryBox.status === 'opening' ? '摇签中…' : (mysteryBox.status === 'revealed' ? '🔄 重新抽' : '✨ 开始抽签'))}}
           </button>
         </view>
 
         <!-- 历史记录（纵向列表，按开盒时间倒序） -->
         <view class="history-section" wx:if="{{mysteryBox.history.length > 0}}">
           <view class="history-header">
-            <text class="history-title">本次开过的盲盒</text>
+            <text class="history-title">本次抽过的签</text>
             <text class="history-count">共 {{mysteryBox.history.length}} 个</text>
           </view>
           <view class="history-list">
@@ -83,7 +83,7 @@
               data-idx="{{index}}"
               bindtap="onReopenHistory"
             >
-              <view class="history-rank">第{{item.rank}}开</view>
+              <view class="history-rank">第{{item.rank}}签</view>
               <view class="history-info">
                 <view class="history-name-row">
                   <text class="history-name">{{item.name}}</text>

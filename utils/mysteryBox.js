@@ -184,17 +184,17 @@ function generateMysteryReason(poi, currentScene) {
   const poiScene = detectPoiScene(poi);
   if (isSceneMismatch(poiScene, currentScene)) {
     const sceneLabel = poiScene === '下午茶/饮品' ? '下午茶' : poiScene;
-    return `🌙 盲盒开出「${name}」（${sceneLabel}店），当前是${currentScene}时段，注意营业时间`;
+    return `🌙 抽中「${name}」（${sceneLabel}店），当前是${currentScene}时段，注意营业时间`;
   }
 
-  // 正常盲盒文案（随机选择，突出惊喜/幸运调性）
+  // 正常抽签文案（随机选择，突出惊喜/幸运调性）
   const reasons = [
-    `🎁 恭喜开出「${name}」！${ratingText}的好店`,
-    `✨ 盲盒惊喜：这家${type}距离仅${distanceText}`,
+    `🎁 抽中「${name}」！${ratingText}的好店`,
+    `✨ 今日这一签：这家${type}距离仅${distanceText}`,
     `🌟 惊喜发现！「${name}」等你来尝鲜`,
     `🍀 今日幸运：${ratingText}的${type}推荐给你`,
-    `🎯 盲盒精选：藏在${distanceText}外的宝藏小店`,
-    `💫 神秘开箱：「${name}」，${ratingText}值得一试`,
+    `🎯 隐藏好签：藏在${distanceText}外的宝藏小店`,
+    `💫 缘分到了：「${name}」，${ratingText}值得一试`,
     `🌈 惊喜降临：「${name}」，距离${distanceText}`
   ];
   return reasons[Math.floor(Math.random() * reasons.length)];
