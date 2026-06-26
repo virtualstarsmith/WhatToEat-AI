@@ -18,11 +18,15 @@ const CHAIN_KEYWORDS = [
 ];
 
 // 长尾加成：连锁店降权，特色小店加权（参考"逆用户频率"长尾加权思想）
-// 连锁取 0.2（而非 0.3）：在 20% 的长尾维度上进一步压制连锁，让特色小店更易被开出
+// 分级（06-27-draw-algo 评审修正：无评分店不再享受满格，避免开出无信息垃圾店）：
+//   连锁 → 0.2（压制连锁，保留抽签惊喜性）
+//   非连锁+有评分 → 1.0（真·特色小店，鼓励）
+//   非连锁+无评分 → 0.5（信息不足，适度降权；旧值 1.0 会让无评分苍蝇馆反超高分连锁）
 function longTailBonus(poi) {
   const name = poi.name || '';
   const isChain = CHAIN_KEYWORDS.some((k) => name.indexOf(k) >= 0);
-  return isChain ? 0.2 : 1.0;
+  if (isChain) return 0.2;
+  return poi.rating ? 1.0 : 0.5;
 }
 
 // 时段感知加权：匹配当前时段 ×1.2，不匹配 ×0.85（软引导，不硬过滤）
@@ -64,74 +68,88 @@ function calculateWeight(poi, currentScene) {
 
 // ===== 加权随机选择 =====
 
-// 加权随机：权重高的更易被选中，但谁都有机会（转盘式）
-function weightedRandomPick(candidates) {
-  const totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
+// 加权随机：权重高的更易被选中，但谁都有机会（转盘式）。
+// p 为幂次：p=1（默认）即原加权随机；p<1 压缩权重差距，让长尾更易被选中。
+//   探索档用 p=0.5（√weight），利用档用 p=1.0（weight）。
+//   依据 06-27-draw-algo-bimodal-explore sim 验证：p=0.5 头部12%/长尾33%，命中手气体感。
+function weightedRandomPick(candidates, p) {
+  var power = (p == null) ? 1 : p;
+  var weights = candidates.map(function (c) { return Math.pow(c.weight || 0, power); });
+  var totalWeight = weights.reduce(function (sum, w) { return sum + w; }, 0);
   if (totalWeight <= 0) {
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
-  let random = Math.random() * totalWeight;
-  for (const c of candidates) {
-    random -= c.weight;
-    if (random <= 0) return c;
+  var random = Math.random() * totalWeight;
+  for (var i = 0; i < candidates.length; i++) {
+    random -= weights[i];
+    if (random <= 0) return candidates[i];
   }
   return candidates[candidates.length - 1];
 }
 
+// ===== 探索策略 =====
+
+// 探索档幂次：√weight 压缩权重差距，让长尾冷门店也有合理开出概率。
+// 由 utils/mysteryBox.sim.js 网格搜索验证：p=0.5 时头部(top10%)开出 ~12%、
+// 长尾(bottom40%)开出 ~33%，命中"手气爆棚稀缺、冷门惊喜常态"的产品体感。
+// （softmax 因 exp 放大差距导致头部通吃，已验证不适用，详见 design §2。）
+var EXPLORE_POWER = 0.5;
+
+// reason 档位判定：按选中店在池中的权重排名分位定 tier（事后统计，非算法分支）。
+//   top 20%  → 'explore-head'  （手气爆棚，文案强调高分/超近）
+//   bottom 40% → 'explore-tail' （冷门惊喜，文案强调没听过/宝藏）
+//   其余     → 'explore-mid'   （中性）
+function tierByRank(picked, weighted) {
+  var sorted = weighted.slice().sort(function (a, b) { return (b.weight || 0) - (a.weight || 0); });
+  var n = sorted.length;
+  var rank = -1;
+  for (var i = 0; i < n; i++) {
+    if (sorted[i].poi_id === picked.poi_id) { rank = i; break; }
+  }
+  if (rank < 0) return 'explore-mid';
+  if (rank < Math.max(1, Math.floor(n * 0.2))) return 'explore-head';
+  if (rank >= Math.floor(n * 0.6)) return 'explore-tail';
+  return 'explore-mid';
+}
+
 // ===== 主算法入口 =====
 
-// Epsilon-Greedy 盲盒推荐
+// Epsilon-Greedy 抽签推荐
 // pois: getPoi 返回的标准化 POI 数组
 // openedIds: 本次会话已开过的 poi_id 字符串数组（用于去重）
 // currentScene: 当前时段场景（'早餐' | '午餐' | ...）
-// 返回: { poi_id, poi, fromExplore } 或 null（池子耗尽）
-//   fromExplore=true 表示本次由"探索档"选出（次优但有趣），页面据此决定
-//   是否调 AI 生成惊喜理由——把 AI 成本花在刀刃上，而非每次开盒都调。
+// 返回: { poi_id, poi, fromExplore, tier } 或 null（池子耗尽）
+//   fromExplore=true 表示本次由"探索档"选出，页面据此决定是否调 AI 生成惊喜理由。
+//   tier: 'exploit'(利用) | 'explore-head'(头部/手气爆棚) | 'explore-tail'(长尾/冷门惊喜) | 'explore-mid'(中段)
 function mysteryBoxRecommend(pois, openedIds, currentScene) {
-  const epsilon = 0.3; // 30% 探索 / 70% 利用
+  var epsilon = 0.15; // 15% 探索 / 85% 利用（探索用降幂加权，质量高于纯随机，比例可降）
 
   // 1. 质量门槛 + 会话去重（poi_id 用 location|name 稳定键，保证池子顺序变化后去重仍生效）
-  const openedSet = new Set((openedIds || []).map(String));
-  const candidates = pois
-    .map((poi) => ({ poi, poi_id: makePoiId(poi) }))
-    .filter((c) => qualifyFilter(c.poi))
-    .filter((c) => !openedSet.has(c.poi_id));
+  var openedSet = new Set((openedIds || []).map(String));
+  var candidates = pois
+    .map(function (poi) { return { poi: poi, poi_id: makePoiId(poi) }; })
+    .filter(function (c) { return qualifyFilter(c.poi); })
+    .filter(function (c) { return !openedSet.has(c.poi_id); });
 
   if (candidates.length === 0) return null; // 池子耗尽
 
   // 2. 预计算权重（探索与利用共用；候选通常仅几十家，开销可忽略）
-  const weighted = candidates.map((c) => ({
-    ...c,
-    weight: calculateWeight(c.poi, currentScene)
-  }));
+  var weighted = candidates.map(function (c) {
+    return Object.assign({}, c, { weight: calculateWeight(c.poi, currentScene) });
+  });
 
   // 3. Epsilon-Greedy 决策
   if (Math.random() < epsilon) {
-    // 探索：中段探索，而非纯随机。
-    // 按权重升序排序后取 30%~70% 分位的中段池随机选——既避免纯随机开出离谱结果，
-    // 又能开出"纯利用"选不到的次优好店，保留盲盒惊喜性。
-    const picked = midBandPick(weighted);
-    return { poi_id: picked.poi_id, poi: picked.poi, fromExplore: true };
+    // 探索档：降幂加权随机 P∝√weight——压缩权重差距，长尾冷门店也有合理开出概率，
+    // 既避免纯随机的离谱结果，又能开出"纯利用"选不到的次优/冷门好店。
+    var picked = weightedRandomPick(weighted, EXPLORE_POWER);
+    var tier = tierByRank(picked, weighted);
+    return { poi_id: picked.poi_id, poi: picked.poi, fromExplore: true, tier: tier };
   }
 
-  // 利用：加权随机
-  const picked = weightedRandomPick(weighted);
-  return { poi_id: picked.poi_id, poi: picked.poi, fromExplore: false };
-}
-
-// 中段探索：按权重升序排序，从 30%~70% 分位的子集里随机挑一个。
-// 候选过少（< 3）时退化为「取权重较高者」，避免选出明显劣质结果。
-function midBandPick(weighted) {
-  const sorted = weighted.slice().sort((a, b) => (a.weight || 0) - (b.weight || 0));
-  const n = sorted.length;
-  if (n < 3) {
-    // 候选极少：直接取排序后最高权重者（避免在 2 家里选了更差的）
-    return sorted[n - 1];
-  }
-  const lo = Math.floor(n * 0.3);
-  const hi = Math.ceil(n * 0.7);
-  const band = sorted.slice(lo, hi); // [lo, hi)
-  return band[Math.floor(Math.random() * band.length)];
+  // 利用档：加权随机（偏头部，保稳）
+  var picked2 = weightedRandomPick(weighted);
+  return { poi_id: picked2.poi_id, poi: picked2.poi, fromExplore: false, tier: 'exploit' };
 }
 
 // ===== 场景识别辅助 =====
@@ -173,8 +191,10 @@ function formatRatingZh(r) {
   return r ? r.toFixed(1) + '分' : '好评';
 }
 
-// 生成盲盒专属推荐理由
-function generateMysteryReason(poi, currentScene) {
+// 生成抽签专属推荐理由（模板化，不调用 AI）。
+// tier 来自 mysteryBoxRecommend 返回值，决定文案调性（见 REASONS_BY_TIER）。
+// 兼容旧调用：tier 未传时走 exploit 档（中性）。
+function generateMysteryReason(poi, currentScene, tier) {
   const distanceText = formatDistanceZh(poi.distance);
   const ratingText = formatRatingZh(poi.rating);
   const type = normalizePoiType(poi.type);
@@ -187,17 +207,31 @@ function generateMysteryReason(poi, currentScene) {
     return `🌙 抽中「${name}」（${sceneLabel}店），当前是${currentScene}时段，注意营业时间`;
   }
 
-  // 正常抽签文案（随机选择，突出惊喜/幸运调性）
-  const reasons = [
-    `🎁 抽中「${name}」！${ratingText}的好店`,
-    `✨ 手气不错：这家${type}距离仅${distanceText}`,
-    `🌟 惊喜发现！「${name}」等你来尝鲜`,
-    `🍀 今日幸运：${ratingText}的${type}推荐给你`,
-    `🎯 签运不错：藏在${distanceText}外的宝藏小店`,
-    `💫 手气爆棚：「${name}」，${ratingText}值得一试`,
-    `🌈 运气来了：「${name}」，距离${distanceText}`
-  ];
-  return reasons[Math.floor(Math.random() * reasons.length)];
+  // 正常抽签文案：按 tier 分档选调性（06-27-draw-algo，让 reason 与手气事件一致）
+  // tier 来自 mysteryBoxRecommend 的返回值：explore-head/tail/mid/exploit
+  var REASONS_BY_TIER = {
+    'explore-head': [   // 手气爆棚（头部高分店开出，稀缺高奖励）
+      `🍀 手气爆棚！「${name}」${ratingText}的神仙店`,
+      `🎉 运气爆棚：${ratingText}好店就被你抽到了`,
+      `✨ 手气真好：这家${type}就在${distanceText}`
+    ],
+    'explore-tail': [   // 冷门惊喜（长尾冷门店开出，常态惊喜）
+      `🎯 冷门惊喜：「${name}」藏得挺深`,
+      `🌟 宝藏小店：${distanceText}外有家${type}`,
+      `💫 没听过？试试这家「${name}」，可能有惊喜`
+    ],
+    'explore-mid': [    // 探索中段（既非头部也非长尾）
+      `🎁 抽中「${name}」，${ratingText}的好店`,
+      `🌟 今日这一签：${distanceText}的${type}`
+    ],
+    'exploit': [        // 手气不错（利用档主体）
+      `✨ 手气不错：${ratingText}的${type}`,
+      `🍀 今天运气还行：「${name}」值得一试`,
+      `🌈 运气来了：「${name}」，距离${distanceText}`
+    ]
+  };
+  var pool = REASONS_BY_TIER[tier] || REASONS_BY_TIER['exploit'];
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 module.exports = {
