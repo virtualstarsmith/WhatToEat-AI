@@ -42,50 +42,100 @@
   opacity: 0.5;
 }
 
-/* === 快捷筛选栏（价格/距离/类别，见 06-26-ai-pick-filter-bar） === */
-.filter-section {
+/* === 快捷筛选栏：下拉面板式（见 06-26-ai-pick-filter-bar） === */
+/* 3个维度标签按钮横排，点击展开下拉选项；默认不选=不限，选中态橙色显示当前值 */
+.filter-bar {
   display: flex;
-  gap: 20rpx;
-  margin-bottom: 28rpx;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+  position: relative;
+  z-index: 5;
 }
-.filter-group {
+.filter-tab {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  min-width: 0;
-}
-.filter-label {
-  font-size: 20rpx;
-  color: #8A7968;
-  padding-left: 4rpx;
-}
-.filter-chips {
-  display: flex;
-  gap: 8rpx;
-}
-.filter-chip {
-  flex: 1;
-  text-align: center;
-  padding: 10rpx 0;
-  border-radius: 24rpx;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  padding: 14rpx 0;
+  border-radius: 28rpx;
   background: #FFFFFF;
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: #2B2118;
-  border: 2rpx solid transparent;
-  transition: all 0.2s ease;
+  border: 2rpx solid #EADFD6;
+  transition: all 0.18s ease;
   white-space: nowrap;
 }
-.filter-chip-active {
+/* 已选维度：橙色描边+文字，强调当前筛选生效 */
+.filter-tab-active {
+  color: #FF6B35;
+  border-color: #FF6B35;
+  font-weight: 600;
+}
+/* 展开态：轻微底色，与浮层呼应 */
+.filter-tab-open {
+  background: #FFF8F3;
+}
+.filter-tab-arrow {
+  font-size: 18rpx;
+  color: #8A7968;
+}
+.filter-tab-active .filter-tab-arrow {
+  color: #FF6B35;
+}
+/* loading 中：降透明度（点击由 onToggleFilter 守卫拦截） */
+.filter-tab-disabled {
+  opacity: 0.5;
+}
+
+/* 下拉浮层遮罩（透明，拦截点击外部以收起面板） */
+.filter-panel-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0); /* 透明，仅用于拦截点击 */
+}
+
+/* 下拉浮层：绝对定位在筛选栏下方 */
+.filter-panel {
+  position: absolute;
+  left: 32rpx;
+  right: 32rpx;
+  margin-top: 8rpx;
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(43, 33, 24, 0.12);
+  z-index: 11;
+}
+.filter-panel-title {
+  font-size: 20rpx;
+  color: #8A7968;
+  margin-bottom: 14rpx;
+}
+.filter-panel-options {
+  display: flex;
+  gap: 16rpx;
+}
+.filter-option {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  border-radius: 12rpx;
+  background: #FFF8F3;
+  font-size: 24rpx;
+  color: #2B2118;
+  transition: all 0.18s ease;
+}
+.filter-option-active {
   background: #FF6B35;
   color: #FFFFFF;
   font-weight: 600;
-  box-shadow: 0 2rpx 10rpx rgba(255, 107, 53, 0.22);
 }
-/* 加载中：非当前档位降透明度（点击由 onSelectFilter 守卫拦截，与场景栏一致） */
-.filter-chip-disabled {
-  opacity: 0.5;
-}
+
 
 /* === Banner === */
 .banner-fallback {

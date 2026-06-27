@@ -33,26 +33,37 @@
       </scroll-view>
     </view>
 
-    <!-- 快捷筛选栏（价格/距离/类别，见 06-26-ai-pick-filter-bar） -->
-    <view class="filter-section" wx:if="{{locationOk}}">
+    <!-- 快捷筛选栏：下拉面板式（见 06-26-ai-pick-filter-bar）。
+         3个维度标签按钮，点击展开下拉选项；默认不选=不限。 -->
+    <view class="filter-bar" wx:if="{{locationOk}}">
       <view
-        class="filter-group"
+        class="filter-tab {{filters[group.key] ? 'filter-tab-active' : ''}} {{activeFilter === group.key ? 'filter-tab-open' : ''}} {{(loading || refreshing) ? 'filter-tab-disabled' : ''}}"
         wx:for="{{filterGroups}}"
         wx:for-item="group"
         wx:key="key"
+        data-key="{{group.key}}"
+        bindtap="onToggleFilter"
       >
-        <text class="filter-label">{{group.key === 'price' ? '人均' : (group.key === 'distance' ? '距离' : '类别')}}</text>
-        <view class="filter-chips">
-          <view
-            wx:for="{{group.options}}"
-            wx:for-item="opt"
-            wx:key="value"
-            class="filter-chip {{filters[group.key] === opt.value ? 'filter-chip-active' : ''}} {{(loading || refreshing) && filters[group.key] !== opt.value ? 'filter-chip-disabled' : ''}}"
-            data-key="{{group.key}}"
-            data-value="{{opt.value}}"
-            bindtap="onSelectFilter"
-          >{{opt.label}}</view>
-        </view>
+        <!-- 已选显示值，未选显示维度名 -->
+        <text class="filter-tab-label">{{filters[group.key] ? group.selectedLabel[filters[group.key]] : group.label}}</text>
+        <text class="filter-tab-arrow">{{activeFilter === group.key ? '▲' : '▾'}}</text>
+      </view>
+    </view>
+
+    <!-- 筛选下拉面板：点击维度标签后展开 -->
+    <view class="filter-panel-mask" wx:if="{{activeFilter}}" bindtap="onCloseFilter"></view>
+    <view class="filter-panel" wx:if="{{activeFilter}}">
+      <view class="filter-panel-title">{{activeFilterLabel}}</view>
+      <view class="filter-panel-options">
+        <view
+          class="filter-option {{filters[activeFilter] === opt.value ? 'filter-option-active' : ''}}"
+          wx:for="{{activeFilterOptions}}"
+          wx:for-item="opt"
+          wx:key="value"
+          data-key="{{activeFilter}}"
+          data-value="{{opt.value}}"
+          bindtap="onPickFilter"
+        >{{opt.label}}</view>
       </view>
     </view>
 

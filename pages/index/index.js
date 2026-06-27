@@ -131,30 +131,37 @@ Page({
     filterGroups: [
       {
         key: 'price',
+        label: '人均',
         options: [
-          { value: '', label: '不限' },
           { value: 'cheap', label: '¥30内' },
           { value: 'medium', label: '¥50内' }
-        ]
+        ],
+        selectedLabel: { cheap: '¥30内', medium: '¥50内' }
       },
       {
         key: 'distance',
+        label: '距离',
         options: [
-          { value: '', label: '不限' },
-          { value: 'near', label: '500m' },
-          { value: 'walk', label: '1km' }
-        ]
+          { value: 'near', label: '500m内' },
+          { value: 'walk', label: '1km内' }
+        ],
+        selectedLabel: { near: '500m内', walk: '1km内' }
       },
       {
         key: 'category',
+        label: '类别',
         options: [
-          { value: '', label: '不限' },
           { value: 'fastfood', label: '快餐' },
           { value: 'formal', label: '正餐' }
-        ]
+        ],
+        selectedLabel: { fastfood: '快餐', formal: '正餐' }
       }
     ],
-    filters: { price: '', distance: '', category: '' }
+    filters: { price: '', distance: '', category: '' },
+    // 下拉面板状态：activeFilter=当前展开维度 key（null=都收起）
+    activeFilter: null,
+    activeFilterLabel: '',
+    activeFilterOptions: []
   },
 
   _setScene(scene) {
@@ -258,22 +265,52 @@ Page({
   },
 
   // 快捷筛选切换（复用场景切换的重置模式：清 exclude/推荐，重推）
-  onSelectFilter(e) {
+  // 展开/收起筛选下拉面板（点维度标签）
+  onToggleFilter(e) {
+    if (this.data.loading || this.data.refreshing) return;
+    const key = e.currentTarget.dataset.key;
+    // 已展开同一维度 → 收起；否则展开该维度
+    if (this.data.activeFilter === key) {
+      this._closeFilterPanel();
+      return;
+    }
+    const group = this.data.filterGroups.find((g) => g.key === key);
+    if (!group) return;
+    this.setData({
+      activeFilter: key,
+      activeFilterLabel: group.label,
+      activeFilterOptions: group.options
+    });
+  },
+
+  // 收起下拉面板
+  onCloseFilter() {
+    this._closeFilterPanel();
+  },
+
+  _closeFilterPanel() {
+    this.setData({ activeFilter: null, activeFilterLabel: '', activeFilterOptions: [] });
+  },
+
+  // 选中某个筛选项（点下拉面板里的选项）
+  onPickFilter(e) {
     const { key, value } = e.currentTarget.dataset;
     if (!key) return;
-    // loading/refreshing 中禁止切换，避免并发与状态错乱（与 onSelectScene 一致）
     if (this.data.loading || this.data.refreshing) return;
-    // 点当前已选档位 = 无操作
-    if (this.data.filters[key] === value) return;
+    // 点当前已选项 = 取消（回到不限）
+    const nextValue = this.data.filters[key] === value ? '' : value;
 
-    const nextFilters = Object.assign({}, this.data.filters, { [key]: value });
+    const nextFilters = Object.assign({}, this.data.filters, { [key]: nextValue });
     this.setData({
       filters: nextFilters,
       excludeIds: [],
       recommendations: [],
       cardsView: [],
       source: '',
-      error: ''
+      error: '',
+      activeFilter: null,
+      activeFilterLabel: '',
+      activeFilterOptions: []
     });
 
     if (this.data.locationOk && this.data.pois.length > 0) {
