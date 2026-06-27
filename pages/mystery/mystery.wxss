@@ -57,18 +57,18 @@
   transform-origin: 50% 85%;
 }
 
-/* 摇签动画：筷子在桶口快速小幅度抖动（translate+rotate），
+/* 摇签动画：筷子在桶口小幅缓慢抖动（translate+rotate），
    步进式（steps 感）模拟手腕甩签、筷子互相碰撞的真实手感。
-   0.45s 循环（快速），opening 状态播放，揭晓后停止。 */
+   0.9s 循环（缓慢），opening 状态播放，揭晓后停止。 */
 .chopsticks-shaking {
-  animation: chopsticks-shake 0.45s steps(2, end) infinite;
+  animation: chopsticks-shake 0.9s steps(2, end) infinite;
 }
 @keyframes chopsticks-shake {
   0%   { transform: translate(0, 0) rotate(0deg); }
-  20%  { transform: translate(-2rpx, -1rpx) rotate(-3deg); }
-  40%  { transform: translate(2rpx, 1rpx) rotate(3deg); }
-  60%  { transform: translate(-1rpx, -2rpx) rotate(-2deg); }
-  80%  { transform: translate(2rpx, 0) rotate(2deg); }
+  20%  { transform: translate(-1rpx, 0) rotate(-1.5deg); }
+  40%  { transform: translate(1rpx, 1rpx) rotate(1.5deg); }
+  60%  { transform: translate(0, -1rpx) rotate(-1deg); }
+  80%  { transform: translate(1rpx, 0) rotate(1deg); }
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 
