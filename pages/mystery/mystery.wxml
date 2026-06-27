@@ -18,7 +18,7 @@
     <view class="mystery-container">
       <!-- 未授权位置：定位中 / 引导用户授权 -->
       <view class="mystery-empty" wx:if="{{!locationOk}}">
-        <text class="empty-icon">{{locating ? '📡' : '🎁'}}</text>
+        <text class="empty-icon">{{locating ? '📡' : '🥠'}}</text>
         <text class="empty-title">{{locating ? '定位中…' : '试试你的手气'}}</text>
         <text class="empty-desc" wx:if="{{!locating}}">点击右上角「授权」定位后，\n抽一家附近餐厅，看今天手气如何</text>
       </view>
@@ -33,15 +33,15 @@
             <text class="box-sub-hint">在上方点击「刷新」换个位置，解锁更多签</text>
           </view>
 
-          <!-- 待机状态：毛玻璃盲盒 -->
+          <!-- 待机状态：毛玻璃幸运签 -->
           <view class="box-idle-wrap" wx:elif="{{mysteryBox.status === 'idle'}}">
-            <view class="box-icon">🎁</view>
+            <view class="box-icon">🥠</view>
             <text class="box-hint">点下方按钮，试试今天的手气</text>
           </view>
 
-          <!-- 开盒动画 -->
+          <!-- 开签动画 -->
           <view class="box-opening-wrap" wx:elif="{{mysteryBox.status === 'opening'}}">
-            <view class="box-icon box-shaking">🎁</view>
+            <view class="box-icon box-shaking">🥠</view>
             <text class="box-hint">摇签中…✨</text>
           </view>
 
