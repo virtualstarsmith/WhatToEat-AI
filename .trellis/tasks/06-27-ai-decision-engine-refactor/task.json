@@ -1,0 +1,30 @@
+{
+  "id": "ai-decision-engine-refactor",
+  "name": "ai-decision-engine-refactor",
+  "title": "AI决策引擎重构：从文案工到真决策者",
+  "description": "App核心重构：两个Tab的AI从'事后写理由'升级为'真正参与选店决策'。采用混合模式——随机/公式保骨架(手气感)，AI实时调权重(智能)。触发时机：场景切换时调AI算权重并缓存。父任务统一管理。",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P0",
+  "creator": "WhatToEat-AI",
+  "assignee": "WhatToEat-AI",
+  "createdAt": "2026-06-27",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "06-27-remove-ai-pick-filter-bar",
+    "06-27-mystery-ai-weighted-draw",
+    "06-27-aipick-few-and-precise"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
