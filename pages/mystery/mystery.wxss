@@ -57,18 +57,22 @@
   transform-origin: 50% 85%;
 }
 
-/* 摇签动画：筷子在桶口小幅缓慢抖动（translate+rotate），
-   步进式（steps 感）模拟手腕甩签、筷子互相碰撞的真实手感。
-   0.9s 循环（缓慢），opening 状态播放，揭晓后停止。 */
+/* 摇签动画：筷子在桶口"颤动"（高频微位移，模拟碰撞）。
+   核心思路：真实摇签是"颤"不是"摆"——用 8 帧不规则微位移
+   模拟筷子互相碰撞的随机感，而非规则正弦摆动。
+   0.5s 循环（每帧~62ms，接近手机震动频率），origin 在桶口。 */
 .chopsticks-shaking {
-  animation: chopsticks-shake 0.9s steps(2, end) infinite;
+  animation: chopsticks-shake 0.5s linear infinite;
 }
 @keyframes chopsticks-shake {
   0%   { transform: translate(0, 0) rotate(0deg); }
-  20%  { transform: translate(-1rpx, 0) rotate(-1.5deg); }
-  40%  { transform: translate(1rpx, 1rpx) rotate(1.5deg); }
-  60%  { transform: translate(0, -1rpx) rotate(-1deg); }
-  80%  { transform: translate(1rpx, 0) rotate(1deg); }
+  12%  { transform: translate(-2rpx, -1rpx) rotate(-2deg); }
+  25%  { transform: translate(2rpx, 1rpx) rotate(1deg); }
+  37%  { transform: translate(-1rpx, -2rpx) rotate(-1deg); }
+  50%  { transform: translate(2rpx, 0) rotate(2deg); }
+  62%  { transform: translate(-2rpx, 1rpx) rotate(-2deg); }
+  75%  { transform: translate(1rpx, -1rpx) rotate(1deg); }
+  87%  { transform: translate(-1rpx, 2rpx) rotate(-1deg); }
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 
