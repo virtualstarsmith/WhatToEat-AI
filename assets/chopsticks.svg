@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" fill="none">
+  <!-- 筷子层（独立动画用）：3根深棕木筷+橙色顶部装饰。
+       坐标与饭桶SVG原筷子一致，叠层时严丝合缝。
+       摇签时此层做快速抖动动画，饭桶静止。 -->
+  <!-- 筷1：最高，橙色顶饰 -->
+  <rect x="48" y="14" width="4.5" height="52" rx="2" fill="#8B5A3C"/>
+  <rect x="47" y="12" width="7" height="4" rx="1.5" fill="#FF6B35"/>
+  <!-- 筷2：中等 -->
+  <rect x="58" y="22" width="4.5" height="44" rx="2" fill="#8B5A3C"/>
+  <rect x="57" y="20" width="7" height="4" rx="1.5" fill="#FF6B35"/>
+  <!-- 筷3：略矮 -->
+  <rect x="68" y="28" width="4.5" height="38" rx="2" fill="#8B5A3C"/>
+</svg>

@@ -19,7 +19,10 @@
       <!-- 未授权位置：定位中 / 引导用户授权 -->
       <view class="mystery-empty" wx:if="{{!locationOk}}">
         <view wx:if="{{locating}}" class="empty-icon">📡</view>
-        <view wx:else class="empty-icon box-tube"></view>
+        <view wx:else class="empty-icon tube-stack">
+          <view class="tube-bucket"></view>
+          <view class="tube-chopsticks"></view>
+        </view>
         <text class="empty-title">{{locating ? '定位中…' : '试试你的手气'}}</text>
         <text class="empty-desc" wx:if="{{!locating}}">点击右上角「授权」定位后，\n抽一家附近餐厅，看今天手气如何</text>
       </view>
@@ -34,15 +37,21 @@
             <text class="box-sub-hint">在上方点击「刷新」换个位置，解锁更多签</text>
           </view>
 
-          <!-- 待机状态：幸运签筒 -->
+          <!-- 待机状态：饭桶+筷子（静止） -->
           <view class="box-idle-wrap" wx:elif="{{mysteryBox.status === 'idle'}}">
-            <view class="box-icon box-tube"></view>
+            <view class="box-icon tube-stack">
+              <view class="tube-bucket"></view>
+              <view class="tube-chopsticks"></view>
+            </view>
             <text class="box-hint">点下方按钮，试试今天的手气</text>
           </view>
 
-          <!-- 开签动画 -->
+          <!-- 摇签动画：饭桶静止，筷子快速抖动 -->
           <view class="box-opening-wrap" wx:elif="{{mysteryBox.status === 'opening'}}">
-            <view class="box-icon box-tube box-shaking"></view>
+            <view class="box-icon tube-stack">
+              <view class="tube-bucket"></view>
+              <view class="tube-chopsticks chopsticks-shaking"></view>
+            </view>
             <text class="box-hint">摇签中…✨</text>
           </view>
 

@@ -29,19 +29,49 @@
   margin-bottom: 30rpx;
 }
 
-/* 抽签图标（自绘 SVG，data URI 内嵌）：饭桶 + 筷子（美食场景同构）。
-   筷子=签，饭桶=签筒。用 1em 尺寸 → 继承父 class font-size
-   （empty-icon=120rpx / box-icon=180rpx），viewBox 6:7 故 height 略大。 */
-.box-tube {
+/* 抽签图标：饭桶（静止）+ 筷子（可独立动画），美食场景同构。
+   拆成两层是为了让"摇签"时只有筷子抖动、饭桶不动（真实摇签仪式感）。
+   用 1em 尺寸 → 继承父 class font-size（empty-icon=120rpx / box-icon=180rpx）。 */
+.tube-stack {
+  position: relative;
   width: 1em;
   height: 1.17em;
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%20140%22%20fill%3D%22none%22%3E%3Crect%20x%3D%2248%22%20y%3D%2214%22%20width%3D%224.5%22%20height%3D%2252%22%20rx%3D%222%22%20fill%3D%22%238B5A3C%22%2F%3E%3Crect%20x%3D%2247%22%20y%3D%2212%22%20width%3D%227%22%20height%3D%224%22%20rx%3D%221.5%22%20fill%3D%22%23FF6B35%22%2F%3E%3Crect%20x%3D%2258%22%20y%3D%2222%22%20width%3D%224.5%22%20height%3D%2244%22%20rx%3D%222%22%20fill%3D%22%238B5A3C%22%2F%3E%3Crect%20x%3D%2257%22%20y%3D%2220%22%20width%3D%227%22%20height%3D%224%22%20rx%3D%221.5%22%20fill%3D%22%23FF6B35%22%2F%3E%3Crect%20x%3D%2268%22%20y%3D%2228%22%20width%3D%224.5%22%20height%3D%2238%22%20rx%3D%222%22%20fill%3D%22%238B5A3C%22%2F%3E%3Cpath%20d%3D%22M%2022%2066%20L%2098%2066%20L%2092%20124%20L%2028%20124%20Z%22%20fill%3D%22%23FF6B35%22%2F%3E%3Cellipse%20cx%3D%2260%22%20cy%3D%2266%22%20rx%3D%2238%22%20ry%3D%227%22%20fill%3D%22%23C44A1F%22%2F%3E%3Cellipse%20cx%3D%2260%22%20cy%3D%2265%22%20rx%3D%2233%22%20ry%3D%225%22%20fill%3D%22%23FFF8F3%22%2F%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2264%22%20r%3D%221.3%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2266%22%20r%3D%221.3%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Ccircle%20cx%3D%2270%22%20cy%3D%2264%22%20r%3D%221.3%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Ccircle%20cx%3D%2244%22%20cy%3D%2265%22%20r%3D%221.1%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Ccircle%20cx%3D%2276%22%20cy%3D%2265%22%20r%3D%221.1%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Cpath%20d%3D%22M%2027%2092%20L%2093%2092%22%20stroke%3D%22%23C44A1F%22%20stroke-width%3D%223.5%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.6%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22105%22%20r%3D%2211%22%20fill%3D%22%23FFF8F3%22%2F%3E%3Ctext%20x%3D%2260%22%20y%3D%22110%22%20text-anchor%3D%22middle%22%20font-size%3D%2214%22%20font-weight%3D%22700%22%20fill%3D%22%23FF6B35%22%20font-family%3D%22sans-serif%22%3E%E9%A5%AD%3C%2Ftext%3E%3C%2Fsvg%3E");
+}
+.tube-bucket,
+.tube-chopsticks {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  margin-left: auto;
-  margin-right: auto;
 }
+.tube-bucket {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%20140%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M%2022%2066%20L%2098%2066%20L%2092%20124%20L%2028%20124%20Z%22%20fill%3D%22%23FF6B35%22%2F%3E%3Cellipse%20cx%3D%2260%22%20cy%3D%2266%22%20rx%3D%2238%22%20ry%3D%227%22%20fill%3D%22%23C44A1F%22%2F%3E%3Cellipse%20cx%3D%2260%22%20cy%3D%2265%22%20rx%3D%2233%22%20ry%3D%225%22%20fill%3D%22%23FFF8F3%22%2F%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2264%22%20r%3D%221.3%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2266%22%20r%3D%221.3%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Ccircle%20cx%3D%2270%22%20cy%3D%2264%22%20r%3D%221.3%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Ccircle%20cx%3D%2244%22%20cy%3D%2265%22%20r%3D%221.1%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Ccircle%20cx%3D%2276%22%20cy%3D%2265%22%20r%3D%221.1%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Cpath%20d%3D%22M%2027%2092%20L%2093%2092%22%20stroke%3D%22%23C44A1F%22%20stroke-width%3D%223.5%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.6%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22105%22%20r%3D%2211%22%20fill%3D%22%23FFF8F3%22%2F%3E%3Ctext%20x%3D%2260%22%20y%3D%22110%22%20text-anchor%3D%22middle%22%20font-size%3D%2214%22%20font-weight%3D%22700%22%20fill%3D%22%23FF6B35%22%20font-family%3D%22sans-serif%22%3E%E9%A5%AD%3C%2Ftext%3E%3C%2Fsvg%3E");
+}
+.tube-chopsticks {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%20140%22%20fill%3D%22none%22%3E%3Crect%20x%3D%2248%22%20y%3D%2214%22%20width%3D%224.5%22%20height%3D%2252%22%20rx%3D%222%22%20fill%3D%22%238B5A3C%22%2F%3E%3Crect%20x%3D%2247%22%20y%3D%2212%22%20width%3D%227%22%20height%3D%224%22%20rx%3D%221.5%22%20fill%3D%22%23FF6B35%22%2F%3E%3Crect%20x%3D%2258%22%20y%3D%2222%22%20width%3D%224.5%22%20height%3D%2244%22%20rx%3D%222%22%20fill%3D%22%238B5A3C%22%2F%3E%3Crect%20x%3D%2257%22%20y%3D%2220%22%20width%3D%227%22%20height%3D%224%22%20rx%3D%221.5%22%20fill%3D%22%23FF6B35%22%2F%3E%3Crect%20x%3D%2268%22%20y%3D%2228%22%20width%3D%224.5%22%20height%3D%2238%22%20rx%3D%222%22%20fill%3D%22%238B5A3C%22%2F%3E%3C%2Fsvg%3E");
+  /* origin 设在底部居中（筷子插入桶口处），抖动时像在桶口晃 */
+  transform-origin: 50% 85%;
+}
+
+/* 摇签动画：筷子在桶口快速小幅度抖动（translate+rotate），
+   步进式（steps 感）模拟手腕甩签、筷子互相碰撞的真实手感。
+   0.45s 循环（快速），opening 状态播放，揭晓后停止。 */
+.chopsticks-shaking {
+  animation: chopsticks-shake 0.45s steps(2, end) infinite;
+}
+@keyframes chopsticks-shake {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  20%  { transform: translate(-2rpx, -1rpx) rotate(-3deg); }
+  40%  { transform: translate(2rpx, 1rpx) rotate(3deg); }
+  60%  { transform: translate(-1rpx, -2rpx) rotate(-2deg); }
+  80%  { transform: translate(2rpx, 0) rotate(2deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
 .empty-title {
   font-size: 34rpx;
   font-weight: 700;
@@ -105,7 +135,8 @@
 }
 .box-opening-wrap .box-icon {
   font-size: 180rpx;
-  animation: mbShake 0.4s ease-in-out infinite, mbGlow 1.5s ease-out infinite;
+  /* 饭桶静止，只保留光环；整体摇晃(mbShake)已移除，改由筷子层单独抖动 */
+  animation: mbGlow 1.5s ease-out infinite;
   margin-bottom: 30rpx;
 }
 .box-opening-wrap .box-hint {
