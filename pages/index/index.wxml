@@ -33,40 +33,6 @@
       </scroll-view>
     </view>
 
-    <!-- 快捷筛选栏：下拉面板式（见 06-26-ai-pick-filter-bar）。
-         3个维度标签按钮，点击展开下拉选项；默认不选=不限。 -->
-    <view class="filter-bar" wx:if="{{locationOk}}">
-      <view
-        class="filter-tab {{filters[group.key] ? 'filter-tab-active' : ''}} {{activeFilter === group.key ? 'filter-tab-open' : ''}} {{(loading || refreshing) ? 'filter-tab-disabled' : ''}}"
-        wx:for="{{filterGroups}}"
-        wx:for-item="group"
-        wx:key="key"
-        data-key="{{group.key}}"
-        bindtap="onToggleFilter"
-      >
-        <!-- 已选显示值，未选显示维度名 -->
-        <text class="filter-tab-label">{{filters[group.key] ? group.selectedLabel[filters[group.key]] : group.label}}</text>
-        <text class="filter-tab-arrow">{{activeFilter === group.key ? '▲' : '▾'}}</text>
-      </view>
-    </view>
-
-    <!-- 筛选下拉面板：点击维度标签后展开 -->
-    <view class="filter-panel-mask" wx:if="{{activeFilter}}" bindtap="onCloseFilter"></view>
-    <view class="filter-panel" wx:if="{{activeFilter}}">
-      <view class="filter-panel-title">{{activeFilterLabel}}</view>
-      <view class="filter-panel-options">
-        <view
-          class="filter-option {{filters[activeFilter] === opt.value ? 'filter-option-active' : ''}}"
-          wx:for="{{activeFilterOptions}}"
-          wx:for-item="opt"
-          wx:key="value"
-          data-key="{{activeFilter}}"
-          data-value="{{opt.value}}"
-          bindtap="onPickFilter"
-        >{{opt.label}}</view>
-      </view>
-    </view>
-
     <!-- 兜底提示：不暴露"失败"，用中性语气承接，避免戳破推荐的连续感 -->
     <view class="banner-fallback" wx:if="{{source === 'fallback' && cardsView.length > 0}}">
       💬 为你又挑了几家，看看哪家合口味
