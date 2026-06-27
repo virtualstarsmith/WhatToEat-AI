@@ -28,6 +28,20 @@
   font-size: 120rpx;
   margin-bottom: 30rpx;
 }
+
+/* 幸运签筒图标（自绘 SVG，data URI 内嵌）。
+   用 1em 尺寸 → 自动继承父 class 的 font-size（empty-icon=120rpx / box-icon=180rpx），
+   viewBox 6:7 高瘦比，故 height 略大于 width。 */
+.box-tube {
+  width: 1em;
+  height: 1.17em;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%20140%22%20fill%3D%22none%22%3E%3Crect%20x%3D%2250%22%20y%3D%2218%22%20width%3D%226%22%20height%3D%2246%22%20rx%3D%222%22%20fill%3D%22%23F4E4C1%22%20stroke%3D%22%23C9A876%22%20stroke-width%3D%221.5%22%2F%3E%3Ccircle%20cx%3D%2253%22%20cy%3D%2216%22%20r%3D%224.5%22%20fill%3D%22%23E63946%22%2F%3E%3Crect%20x%3D%2262%22%20y%3D%2226%22%20width%3D%226%22%20height%3D%2238%22%20rx%3D%222%22%20fill%3D%22%23F4E4C1%22%20stroke%3D%22%23C9A876%22%20stroke-width%3D%221.5%22%2F%3E%3Ccircle%20cx%3D%2265%22%20cy%3D%2224%22%20r%3D%224%22%20fill%3D%22%23E63946%22%2F%3E%3Crect%20x%3D%2240%22%20y%3D%2232%22%20width%3D%226%22%20height%3D%2232%22%20rx%3D%222%22%20fill%3D%22%23F4E4C1%22%20stroke%3D%22%23C9A876%22%20stroke-width%3D%221.5%22%2F%3E%3Crect%20x%3D%2272%22%20y%3D%2238%22%20width%3D%226%22%20height%3D%2226%22%20rx%3D%222%22%20fill%3D%22%23F4E4C1%22%20stroke%3D%22%23C9A876%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%2028%2064%20L%2092%2064%20L%2088%20122%20L%2032%20122%20Z%22%20fill%3D%22%23FF6B35%22%2F%3E%3Cellipse%20cx%3D%2260%22%20cy%3D%2264%22%20rx%3D%2232%22%20ry%3D%226.5%22%20fill%3D%22%23C44A1F%22%2F%3E%3Cellipse%20cx%3D%2260%22%20cy%3D%2263%22%20rx%3D%2228%22%20ry%3D%224.5%22%20fill%3D%22%237A2E18%22%2F%3E%3Cpath%20d%3D%22M%2031%2083%20L%2089%2083%22%20stroke%3D%22%23C44A1F%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.55%22%2F%3E%3Cpath%20d%3D%22M%2032%20101%20L%2088%20101%22%20stroke%3D%22%23C44A1F%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.55%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2292%22%20r%3D%229%22%20fill%3D%22%23FFF8F3%22%2F%3E%3Ctext%20x%3D%2260%22%20y%3D%2296%22%20text-anchor%3D%22middle%22%20font-size%3D%2211%22%20font-weight%3D%22700%22%20fill%3D%22%23FF6B35%22%20font-family%3D%22sans-serif%22%3E%E7%AD%BE%3C%2Ftext%3E%3C%2Fsvg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  margin-left: auto;
+  margin-right: auto;
+}
 .empty-title {
   font-size: 34rpx;
   font-weight: 700;
