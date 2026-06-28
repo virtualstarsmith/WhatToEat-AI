@@ -1,0 +1,32 @@
+# =============================================================================
+# CNB 配置 — 微信小程序项目开发环境
+#
+# 开发环境镜像由独立项目 wechat-dev-tools-cnb 构建，本项目仅引用其镜像。
+# 镜像项目地址：https://cnb.cool/virtualstarsmith/wechat-dev-tools-cnb
+# =============================================================================
+
+$:
+  vscode:
+    - docker:
+        # 引用 wechat-dev-tools-cnb 项目构建的开发环境镜像
+        # 首次使用需先到 wechat-dev-tools-cnb 项目推送代码触发镜像构建
+        image: docker.cnb.cool/virtualstarsmith/wechat-dev-tools-cnb:latest
+      services:
+        - vscode
+        - docker
+      # 开发环境启动后自动执行的任务
+      stages:
+        - name: 启动微信开发者工具与 noVNC 远程桌面
+          script: |
+            nohup start-wxdev.sh --bg > /tmp/wxdev-start.log 2>&1 &
+            sleep 3
+            echo "========================================"
+            echo " 微信开发者工具 + noVNC 正在后台启动"
+            echo " 容器内地址: http://localhost:6080/vnc.html"
+            echo " VNC 密码: 123456"
+            echo " 下一步: 在 WebIDE 底部 PORTS 面板映射 6080 端口，"
+            echo "        得到公网 URL 后浏览器打开 <公网URL>/vnc.html"
+            echo " 日志: /tmp/wxdev-*.log"
+            echo "========================================"
+        - name: 准备就绪
+          script: echo "环境就绪，开始开发吧。"
