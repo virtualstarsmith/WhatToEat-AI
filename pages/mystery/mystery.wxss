@@ -24,20 +24,6 @@
   padding: 100rpx 40rpx;
   text-align: center;
 }
-/* ⚠️ 临时测试按钮样式（06-27 Step0，验证后删除） */
-.step0-test-btn {
-  position: fixed;
-  right: 24rpx;
-  top: 140rpx;
-  z-index: 99;
-  background: #FF6B35;
-  color: #fff;
-  font-size: 22rpx;
-  padding: 14rpx 20rpx;
-  border-radius: 30rpx;
-  box-shadow: 0 4rpx 12rpx rgba(255,107,53,0.4);
-}
-
 .empty-icon {
   font-size: 120rpx;
   margin-bottom: 30rpx;

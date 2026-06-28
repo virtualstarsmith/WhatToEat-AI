@@ -14,9 +14,6 @@
     </view>
   </view>
 
-  <!-- ⚠️ 临时测试按钮（06-27 Step0 验证AI情境分，验证后删除） -->
-  <view class="step0-test-btn" bindtap="_testContextScore">🧪 测试AI情境分</view>
-
   <scroll-view scroll-y class="mystery-scroll">
     <view class="mystery-container">
       <!-- 未授权位置：定位中 / 引导用户授权 -->

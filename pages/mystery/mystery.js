@@ -168,49 +168,6 @@ Page({
     }
   },
 
-  // ⚠️ 临时测试入口（06-27 Step 0 验证 AI 情境分 prompt，验证后删除）
-  // 真机点击测试按钮后调用，用真实 pois 调 scoreSceneContext，console.log 输出
-  async _testContextScore() {
-    const pois = this.data.pois || [];
-    if (pois.length === 0) {
-      wx.showToast({ title: '请先授权定位', icon: 'none' });
-      return;
-    }
-    const scene = this.data.scene;
-    wx.showLoading({ title: 'AI 评估情境中…', mask: true });
-    console.log('=== [Step0测试] 输入场景:', scene, '候选数:', pois.length, '===');
-    console.log('[Step0测试] 候选前5:', pois.slice(0, 5).map(p => ({ name: p.name, type: p.type, distance: p.distance, rating: p.rating })));
-    try {
-      const result = await scoreSceneContext(pois, scene);
-      wx.hideLoading();
-      if (!result) {
-        console.log('[Step0测试] AI 返回 null（失败/兜底）');
-        wx.showToast({ title: 'AI 返回 null', icon: 'none' });
-        return;
-      }
-      console.log('[Step0测试] reason:', result.reason);
-      console.log('[Step0测试] adjustments:', JSON.stringify(result.adjustments, null, 2));
-      // 打印 top3 加分 / bottom3 减分
-      const entries = Object.entries(result.adjustments).sort((a, b) => b[1] - a[1]);
-      console.log('[Step0测试] 加分最高3:', entries.slice(0, 3));
-      console.log('[Step0测试] 减分最低3:', entries.slice(-3));
-      // 覆盖率检查
-      const expected = pois.slice(0, 15).map(p => p.poi_id).filter(Boolean);
-      const got = Object.keys(result.adjustments);
-      const missing = expected.filter(id => !got.includes(id));
-      console.log('[Step0测试] 覆盖率:', got.length + '/' + expected.length, missing.length > 0 ? '缺失:' + missing : '全覆盖');
-      wx.showModal({
-        title: 'Step0 测试结果',
-        content: 'reason: ' + result.reason + '\n覆盖率: ' + got.length + '/' + expected.length + '\n详见 console',
-        showCancel: false
-      });
-    } catch (e) {
-      wx.hideLoading();
-      console.error('[Step0测试] 异常:', e);
-      wx.showToast({ title: '异常:' + (e.message || e), icon: 'none' });
-    }
-  },
-
   _setScene(scene) {
     this.setData({ scene, sceneShort: sceneLabel(scene) });
   },
