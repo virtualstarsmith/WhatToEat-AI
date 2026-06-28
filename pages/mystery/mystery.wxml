@@ -27,7 +27,7 @@
         <text class="empty-desc" wx:if="{{!locating}}">点击右上角「授权」定位后，\n抽一家附近餐厅，看今天手气如何</text>
       </view>
 
-      <!-- 盲盒主体（已授权） -->
+      <!-- 抽签主体（已授权） -->
       <block wx:else>
         <view class="mystery-box mystery-{{mysteryBox.status}}">
           <!-- 池耗尽状态 -->
