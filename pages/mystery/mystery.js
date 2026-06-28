@@ -109,7 +109,11 @@ Page({
     // CPS 红包入口（与 index 页共享逻辑，用 coupon-float 组件渲染）
     platformButtons: [],
     showCouponPicker: false,
-    locating: false  // 自动定位中（首屏静默定位，避免空状态闪烁）
+    locating: false,  // 自动定位中（首屏静默定位，避免空状态闪烁）
+    // AI 情境分（06-27-ai-decision-engine）：场景切换时 AI 给候选店打的情境适配分
+    contextAdjustments: null,  // { [poi_id]: number } 或 null（AI未就绪，走纯公式）
+    contextReason: '',         // AI 场景级理由（如"午餐求快，偏好快餐"）
+    contextLoading: false      // AI 情境计算中（不阻塞抽签，仅 loading 反馈）
   },
 
   onLoad() {
@@ -122,6 +126,7 @@ Page({
       .then((pois) => {
         locHelper.syncFromGlobal(this);
         this.setData({ locating: false });
+        this._refreshContextAdjustments();  // 定位成功，预热 AI 情境分
       })
       .catch(() => {
         // 自动定位失败/拒绝 → 回退到手动选点（chooseLocationAndGetPois）
@@ -147,6 +152,8 @@ Page({
       locHelper.markPoisConsumed(this);
       this._resetMysteryBox();
     }
+    // 预热 AI 情境分（有缓存，重复调用不会重复请求 AI；场景/池未变则命中缓存）
+    this._refreshContextAdjustments();
   },
 
   onHide() {
@@ -165,6 +172,25 @@ Page({
     if (this._openTimer) {
       clearTimeout(this._openTimer);
       this._openTimer = null;
+    }
+  },
+
+  // AI 情境分预热：场景切换/进页面/位置变化时调用。
+  // 调 scoreSceneContext 算情境分并存 data，抽签时使用。
+  // 不阻塞抽签——AI 未就绪时 contextAdjustments=null，抽签走纯公式兜底。
+  async _refreshContextAdjustments() {
+    const pois = this.data.pois || [];
+    if (pois.length === 0) return;
+    this.setData({ contextLoading: true });
+    try {
+      const result = await scoreSceneContext(pois, this.data.scene);
+      this.setData({
+        contextAdjustments: result ? result.adjustments : null,
+        contextReason: result ? result.reason : '',
+        contextLoading: false
+      });
+    } catch (e) {
+      this.setData({ contextAdjustments: null, contextReason: '', contextLoading: false });
     }
   },
 
@@ -242,7 +268,8 @@ Page({
     const result = mb.mysteryBoxRecommend(
       this.data.pois,
       mbState.openedIds,
-      this.data.scene
+      this.data.scene,
+      this.data.contextAdjustments  // AI 情境分（null=纯公式兜底）
     );
 
     if (!result) {
@@ -282,7 +309,12 @@ Page({
     const isMismatch = mb.isSceneMismatch(poiScene, this.data.scene);
 
     // 本地模板理由（保底，一定能拿到）。tier 决定文案调性（手气爆棚/冷门惊喜/中段/利用）。
-    const fallbackReason = mb.generateMysteryReason(poi, this.data.scene, result.tier);
+    const tierReason = mb.generateMysteryReason(poi, this.data.scene, result.tier);
+
+    // reason 组装：AI 场景理由（contextReason，前置）+ 档位文案（tierReason）。
+    // contextReason 来自 AI 情境引擎（场景级，如"午餐求快"），为空则只用档位文案。
+    const contextReason = (this.data.contextReason || '').trim();
+    const fallbackReason = contextReason ? (contextReason + ' · ' + tierReason.replace(/^[^\u4e00-\u9fa5a-zA-Z0-9]+/, '')) : tierReason;
 
     // 场景严重不匹配（如夜宵时段开出早餐店）一律用模板的硬提示，不覆盖
     let reason = fallbackReason;
