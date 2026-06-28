@@ -10,3 +10,7 @@ project.private.config.json
 *.log
 .worktrees/
 nul
+
+# 开发产物：AI 生成的设计素材、SVG→dataURI 中间文件（不进小程序主包，避免超 2MB 限制）
+output/
+*.datauri.txt
