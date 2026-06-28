@@ -48,14 +48,22 @@ function buildUserPrompt(pois, scene) {
 // 解析 AI 返回，校验 + clamp
 // 返回 { adjustments: {poi_id: number}, reason: string } 或 null
 function parseContextResult(raw, validPoiIds) {
-  if (!raw || !raw.trim()) return null;
+  if (!raw || !raw.trim()) {
+    console.log('[Step0诊断] parse失败: raw为空');
+    return null;
+  }
   let parsed;
   try {
     parsed = parseRecommendJson(raw);
   } catch (e) {
+    console.log('[Step0诊断] parseRecommendJson抛异常:', e && (e.message || e));
     return null;
   }
-  if (!parsed || typeof parsed !== 'object') return null;
+  if (!parsed || typeof parsed !== 'object') {
+    console.log('[Step0诊断] parse结果非对象:', typeof parsed, parsed);
+    return null;
+  }
+  console.log('[Step0诊断] parse成功，parsed字段:', Object.keys(parsed));
 
   const reason = (typeof parsed.reason === 'string') ? parsed.reason : '';
   const rawAdj = (parsed.adjustments && typeof parsed.adjustments === 'object') ? parsed.adjustments : null;
@@ -98,9 +106,14 @@ async function scoreSceneContext(pois, scene) {
 
   try {
     var fullContent = await streamAiText(messages, {});
+    // ⚠️ Step0 诊断日志（验证后删除）
+    console.log('[Step0诊断] streamAiText 返回原始内容(前300字符):', (fullContent || '').slice(0, 300));
+    console.log('[Step0诊断] 返回类型:', typeof fullContent, '长度:', (fullContent || '').length);
     var result = parseContextResult(fullContent, validPoiIds);
+    console.log('[Step0诊断] parseContextResult:', result ? '成功' : 'null(解析失败或无有效分)');
     return result; // null 或 {adjustments, reason}
   } catch (e) {
+    console.error('[Step0诊断] streamAiText 抛异常:', e && (e.message || e.errMsg || e));
     return null;
   }
 }
