@@ -66,7 +66,7 @@
           </view>
         </view>
 
-        <!-- 开盲盒 / 再开一次按钮 -->
+        <!-- 抽签 / 再试一次手气按钮 -->
         <view class="mystery-action-bar">
           <button
             class="btn-mystery"
