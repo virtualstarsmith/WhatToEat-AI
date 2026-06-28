@@ -9,6 +9,7 @@ const { normalizePoiType } = require('../../utils/util.js');
 const { scoreCandidates: scoreCandidatesBase } = require('../../utils/scoring.js');
 const { detectScene, formatDistance, formatRating, pad2 } = require('../../utils/recommend.js');
 const { callAiRecommend } = require('../../utils/aiRecommend.js');
+const { scoreSceneContext } = require('../../utils/aiContext.js');
 
 // 场景语气色（toneClass）现收敛到 config/scenes.js 单一事实源，不再在本页维护 SCENE_TONE_MAP。
 const SCENE_OPTIONS = SCENES.map((scene) => ({
@@ -32,12 +33,22 @@ function sceneMultiplier(scene, poi) {
 // 首页候选打分：复用 utils/scoring.js 的 scoreCandidates，传入首页专属权重 profile 与场景乘数。
 // matcher 用 (poi) => sceneMultiplier(scene, poi) 把场景绑定进去。
 // poi_id 用稳定唯一标识（见 06-24-poi-id-stable）；matched 由 scoreCandidatesBase 按 matcher 命中计算。
-function scoreCandidates(pois, scene, excludeIds) {
-  return scoreCandidatesBase(pois, {
+// contextAdjustments: AI 情境分（06-27-ai-decision-engine），{ [poi_id]: number } 或 null。
+//   叠加在 base score 上——AI 让候选池本身就被情境化，AI 选店再从中挑。
+function scoreCandidates(pois, scene, excludeIds, contextAdjustments) {
+  const scored = scoreCandidatesBase(pois, {
     weights: { d: 0.5, q: 0.5 },
     matcher: (poi) => sceneMultiplier(scene, poi),
     excludeIds
   });
+  // 叠加 AI 情境分（缺失项为 0，即纯公式）
+  if (contextAdjustments) {
+    scored.forEach((item) => {
+      const adj = contextAdjustments[item.poi_id];
+      if (typeof adj === 'number') item.score += adj;
+    });
+  }
+  return scored;
 }
 
 // 不用数组展开 [...scored]：微信开发者工具会把它转译成 @babel/runtime 的
@@ -126,6 +137,9 @@ Page({
     lastRefreshTime: 0,
     dailyRefreshLimit: 20,
     cooldownTime: 2000,
+    // AI 情境分（06-27-ai-decision-engine）：场景切换时 AI 给候选店打的情境适配分
+    contextAdjustments: null,  // { [poi_id]: number } 或 null（纯公式兜底）
+    contextReason: ''          // AI 场景级理由（如"午餐求快"）,
   },
 
   _setScene(scene) {
@@ -183,6 +197,8 @@ Page({
     if (locHelper.poisUpdatedSince(this)) {
       locHelper.markPoisConsumed(this);
       this.setData({ excludeIds: [], recommendations: [], cardsView: [], source: '', error: '' });
+      // pois 变了，旧情境分失效，后台刷新（aiContext 有缓存，命中则瞬时）
+      this._refreshContextAdjustments();
     }
     // 如果已有 POI 但当前无推荐结果（含上一步清空后），自动触发一次推荐
     if (this.data.locationOk && this.data.pois.length > 0 && this.data.cardsView.length === 0 && !this.data.loading) {
@@ -205,7 +221,7 @@ Page({
     }
   },
 
-  onSelectScene(e) {
+  async onSelectScene(e) {
     const scene = e.currentTarget.dataset.scene;
     if (!scene || scene === this.data.scene) return;
     // 加载中（首次推荐 / 换一批）禁止切换场景，避免并发请求与状态错乱
@@ -217,11 +233,12 @@ Page({
       recommendations: [],
       cardsView: [],
       source: '',
-      error: ''
+      error: '',
+      loading: true
     });
     if (this.data.locationOk && this.data.pois.length > 0) {
-      // callRecommend 自身不设 loading，这里显式置位以驱动 chip 锁定与加载提示
-      this.setData({ loading: true });
+      // 场景变了，先刷新 AI 情境分（场景级，缓存命中则瞬时），再推荐
+      await this._refreshContextAdjustments();
       this.callRecommend(this.data.pois);
     } else if (this.data.locationOk) {
       this.loadPoisAndRecommend();
@@ -252,8 +269,10 @@ Page({
     if (!g.coord) return;
     this.setData({ loading: true, error: '' });
     locHelper.fetchPois(g.coord)
-      .then((pois) => {
+      .then(async (pois) => {
         locHelper.syncFromGlobal(this);
+        // 首次定位成功：先预热 AI 情境分，再推荐（让首次推荐就带情境）
+        await this._refreshContextAdjustments();
         return this.callRecommend(pois);
       })
       .catch((e) => {
@@ -316,10 +335,26 @@ Page({
     }
   },
 
+  // AI 情境分预热：场景切换/进页面/位置变化时调用（与抽签页同源，复用 aiContext.js 缓存）。
+  // 不阻塞推荐——AI 未就绪时 contextAdjustments=null，走纯公式兜底。
+  async _refreshContextAdjustments() {
+    const pois = this.data.pois || [];
+    if (pois.length === 0) return;
+    try {
+      const result = await scoreSceneContext(pois, this.data.scene);
+      this.setData({
+        contextAdjustments: result ? result.adjustments : null,
+        contextReason: result ? result.reason : ''
+      });
+    } catch (e) {
+      this.setData({ contextAdjustments: null, contextReason: '' });
+    }
+  },
+
   async callRecommend(pois) {
     // 本次推荐消费了当前 pois 版本，标记以供 onShow 判断是否需要作废
     locHelper.markPoisConsumed(this);
-    const scored = scoreCandidates(pois, this.data.scene, this.data.excludeIds);
+    const scored = scoreCandidates(pois, this.data.scene, this.data.excludeIds, this.data.contextAdjustments);
     // AI 候选保留 2 个探索位，避免候选全部同质化；poi_id 已统一为字符串。
     // 连续"换一批"导致 exclude 较多时，把候选数从 7 扩到 10，
     // 避免候选池（7 个）几乎被 exclude 填满、反复推同几家。
@@ -416,7 +451,7 @@ Page({
   },
 
   _useFallbackRecommend() {
-    const scored = scoreCandidates(this.data.pois, this.data.scene, this.data.excludeIds);
+    const scored = scoreCandidates(this.data.pois, this.data.scene, this.data.excludeIds, this.data.contextAdjustments);
     const top3 = scored.slice().sort((a, b) => b.score - a.score).slice(0, 3);
 
     const recommendations = top3.map((item) => ({
