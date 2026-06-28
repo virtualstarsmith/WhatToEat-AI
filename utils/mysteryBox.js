@@ -58,12 +58,15 @@ function qualifyFilter(poi) {
 
 // ===== 权重计算 =====
 
-// 综合权重：40% 距离 + 40% 质量 + 20% 长尾惊喜，再乘时段感知
-function calculateWeight(poi, currentScene) {
+// 综合权重：40% 距离 + 40% 质量 + 20% 长尾惊喜，再乘时段感知。
+// contextAdjust：AI 情境分（-0.3~+0.3），叠加在 base 上、timeAware 乘在外层
+// （情境是基础属性调整，时段乘数仍整体施加）。不传或为 0 = 纯公式（兜底）。
+function calculateWeight(poi, currentScene, contextAdjust) {
   const base = 0.4 * distanceScore(poi.distance)
              + 0.4 * qualityScore(poi.rating)
              + 0.2 * longTailBonus(poi);
-  return base * timeAwareMultiplier(poi, currentScene);
+  const adj = contextAdjust || 0;
+  return (base + adj) * timeAwareMultiplier(poi, currentScene);
 }
 
 // ===== 加权随机选择 =====
@@ -118,11 +121,13 @@ function tierByRank(picked, weighted) {
 // pois: getPoi 返回的标准化 POI 数组
 // openedIds: 本次会话已开过的 poi_id 字符串数组（用于去重）
 // currentScene: 当前时段场景（'早餐' | '午餐' | ...）
+// contextAdjustments: { [poi_id]: number } AI 情境分（可选，null/省略=纯公式兜底）
 // 返回: { poi_id, poi, fromExplore, tier } 或 null（池子耗尽）
 //   fromExplore=true 表示本次由"探索档"选出，页面据此决定是否调 AI 生成惊喜理由。
 //   tier: 'exploit'(利用) | 'explore-head'(头部/手气爆棚) | 'explore-tail'(长尾/冷门惊喜) | 'explore-mid'(中段)
-function mysteryBoxRecommend(pois, openedIds, currentScene) {
+function mysteryBoxRecommend(pois, openedIds, currentScene, contextAdjustments) {
   var epsilon = 0.15; // 15% 探索 / 85% 利用（探索用降幂加权，质量高于纯随机，比例可降）
+  var adjMap = contextAdjustments || {};
 
   // 1. 质量门槛 + 会话去重（poi_id 用 location|name 稳定键，保证池子顺序变化后去重仍生效）
   var openedSet = new Set((openedIds || []).map(String));
@@ -134,8 +139,9 @@ function mysteryBoxRecommend(pois, openedIds, currentScene) {
   if (candidates.length === 0) return null; // 池子耗尽
 
   // 2. 预计算权重（探索与利用共用；候选通常仅几十家，开销可忽略）
+  //    情境分从 adjMap 取，缺失项为 0（纯公式）
   var weighted = candidates.map(function (c) {
-    return Object.assign({}, c, { weight: calculateWeight(c.poi, currentScene) });
+    return Object.assign({}, c, { weight: calculateWeight(c.poi, currentScene, adjMap[c.poi_id] || 0) });
   });
 
   // 3. Epsilon-Greedy 决策
