@@ -105,7 +105,10 @@ async function scoreSceneContext(pois, scene) {
   ];
 
   try {
-    var fullContent = await streamAiText(messages, {});
+    // maxEvents 提高：情境分 JSON 较长（15家店×~20字符+reason≈300+字符），
+    // 默认 maxEvents=100 会导致流式输出被截断（实测 JSON 不完整）。
+    // 设 500 给足余量，避免截断。
+    var fullContent = await streamAiText(messages, { maxEvents: 500 });
     // ⚠️ Step0 诊断日志（验证后删除）
     console.log('[Step0诊断] streamAiText 返回原始内容(前300字符):', (fullContent || '').slice(0, 300));
     console.log('[Step0诊断] 返回类型:', typeof fullContent, '长度:', (fullContent || '').length);
