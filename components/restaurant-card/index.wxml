@@ -10,7 +10,7 @@
   </view>
   <!-- 地址行：点击触发导航（openLocation）。地址为空时不渲染 -->
   <view class="card-loc" wx:if="{{card.address}}" bindtap="onNavigate">
-    <text class="loc-text">📍 {{card.address}}</text>
+    <text class="loc-text">🧭 {{card.address}}</text>
     <text class="loc-arrow">›</text>
   </view>
   <view class="card-reason" wx:if="{{card.reason}}">
